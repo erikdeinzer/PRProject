@@ -1,12 +1,15 @@
 dataset_config = {
     "name": "MUTAG",
     "root": "./data",
-    "transforms": [{"type": "ToUndirected"}],
+    "transforms": [
+        {"type": "ToUndirected"},
+        {"type": "NormalizeFeatures"},
+        {"type": "RandomNodeSplit"},],
 }
 
 model_config = {
     'type': 'GCNv2',
-    'in_channels': 7,  # Number of input features - auto chooses the input features from the dataset
+    'in_channels': 'auto',  # Number of input features - auto chooses the input features from the dataset
     'hidden_channels': 64,
     'out_channels': 2,  # Number of classes
 }
@@ -17,12 +20,6 @@ optim_config = {
     "weight_decay": 5e-4,
 }
 
-"""split_cfg = {
-    "type": "KFoldRunner",
-    "num_folds": 5,
-    "shuffle": True,
-    "random_state": 42,
-}"""
 
 split_cfg = {
     'type': 'SplitRunner',

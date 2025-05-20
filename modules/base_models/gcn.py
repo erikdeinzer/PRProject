@@ -10,7 +10,10 @@ class GCNv2(torch.nn.Module):
         super(GCNv2, self).__init__()
         self.num_layers = num_layers
         self.in_conv = nn.GCNConv(in_channels, hidden_channels)
-        self.hidden_convs = [nn.GCNConv(hidden_channels, hidden_channels) for _ in range(num_layers - 1)]
+
+        self.hidden_convs = self.hidden_convs = torch.nn.ModuleList([
+            nn.GCNConv(hidden_channels, hidden_channels) for _ in range(num_layers - 1)
+        ])
         self.lin = torch.nn.Linear(hidden_channels, out_channels)
         
 
