@@ -17,6 +17,11 @@ class SplitRunner(BaseRunner):
         train_ratio=0.8,
         **kwargs
     ):
+        """
+        Initialize the SplitRunner with a model, data, and configuration.
+        Args:
+            train_ratio: The ratio of the training set to the entire dataset.
+        """
         super().__init__(**kwargs)
 
         self.train_ratio = train_ratio

@@ -3,10 +3,13 @@ import torch.nn.functional as F
 class BaseRunner():
     """
     Base class for all runners.
+
+    The runners are responsible for training and evaluating the models.
+    It is designed for Graph Classification tasks.
     """
 
     def __init__(self, 
-                 dataset, 
+                 dataset_loader, 
                  model_config, 
                  train_config, 
                  train_epochs=100,
@@ -20,16 +23,22 @@ class BaseRunner():
         Initialize the runner with a model, data, and configuration.
 
         Args:
-            model_config: The model config to be used.
-            dataset: The data to be used.
-            config: The configuration for the runner.
+            dataset: The dataset to be used.
+            model_config: The configuration for the model.
+            train_config: The configuration for the training.
+            train_epochs: Number of epochs to train the model.
+            val_interval: Interval for validation.
+            logging_config: Configuration for logging.
+            random_state: Random state for reproducibility.
+            shuffle: Whether to shuffle the data.
         """
-        self.dataset = dataset
+        self.dataset_loader = dataset_loader
+        self.dataset = self.dataset_loader.get_dataset()
 
         if isinstance(model_config, dict):
             if model_config['in_channels'] == 'auto':
                 # Automatically set the in_channels to the number of features in the dataset
-                model_config['in_channels'] = dataset.num_features
+                model_config['in_channels'] = self.dataset.num_features
         else:
             raise ValueError("model_config should be a dictionary with at least 'type' key.")
 
@@ -62,6 +71,14 @@ class BaseRunner():
         raise NotImplementedError("Subclasses should implement this method.")
     
     def train(self, model, loader, optimizer, device):
+        """
+        Train the model on the data.
+        Args:
+            model: The model to be trained.
+            loader: The data loader for the training data.
+            optimizer: The optimizer for the model.
+            device: The device to run the model on.
+        """
         model.train()
         total_loss = 0
         for data in loader:
@@ -77,19 +94,27 @@ class BaseRunner():
     @torch.no_grad()
     def test(self, model, loader, device):
         """
-        Print out the accuracy of the model on the test set as well as the loss.
+        Test the model on the data.
+        Args:
+            model: The model to be tested.
+            loader: The data loader for the test data.
+            device: The device to run the model on.
         """
         model.eval()
         correct = 0
         total_loss = 0
+        total_samples = 0
+
         for data in loader:
             data = data.to(device)
             out = model(data.x, data.edge_index, data.batch)
-            total_loss += F.cross_entropy(out, data.y)
+            loss = F.cross_entropy(out, data.y)
+            total_loss += loss.item()
             pred = out.argmax(dim=1)
             correct += int((pred == data.y).sum())
+            total_samples += data.y.size(0)
 
-        acc = correct / len(loader.dataset)
+        acc = correct / total_samples
         val_loss = total_loss / len(loader)
         return acc, val_loss
     
@@ -107,9 +132,7 @@ class BaseRunner():
 
         print("-" * 50)
         print('Dataset Info:')
-        print(f"Number of graphs: {len(self.dataset)}")
-        print(f"Number of features: {self.dataset.num_features}")
-        print(f"Number of classes: {self.dataset.num_classes}")
+        self.dataset_loader.describe()
 
         print("-" * 50)
         print('Model Info:')

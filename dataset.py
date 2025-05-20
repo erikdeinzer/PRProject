@@ -29,6 +29,18 @@ if ONLINE:
 
 class DatasetLoader:
     def __init__(self, name: str, root: str = "./data", transforms=None, pre_transforms=None) -> None:
+        """
+        Initialize the DatasetLoader with a dataset name, root directory, and optional transformations.
+        This class loads the dataset using PyTorch Geometric's TUDataset and applies the specified transformations.
+        It also extracts metadata about the dataset, including the number of graphs, classes, and node features.
+
+
+        Args:
+            name (str): Name of the dataset to load.
+            root (str): Directory to store the dataset.
+            transforms (list): List of transformations to apply to the dataset
+            pre_transforms (list): List of transformations to apply before loading the dataset.
+        """
         self.name = name
         self.root = root
         self.transforms = build_modules_list(transforms, TRANSFORMS, compose_fn=T.Compose) if transforms else None
@@ -37,6 +49,10 @@ class DatasetLoader:
         self.metadata = self._extract_metadata()
 
     def _extract_metadata(self) -> Dict[str, Any]:
+        """
+        Extracts metadata from the dataset, including the number of graphs, classes, and node features.
+        It also checks the average, maximum, and minimum number of nodes in the graphs, and whether the dataset is homogeneous (all graphs have the same number of node features).
+        """
         sample = self.dataset[0]
         num_graphs = len(self.dataset)
         num_classes = self.dataset.num_classes
@@ -92,42 +108,60 @@ class DatasetLoader:
         soup = BeautifulSoup(response.text, "html.parser")
 
         # Find the table row matching the dataset name
-        table = soup.find("table")
-        if not table:
-            raise RuntimeError("Could not find datasets table on the page.")
-
-
-        for row in table.find_all("tr")[2:]:
-            cols = [c.get_text(strip=True) for c in row.find_all(["th", "td"])]
-            if cols and cols[0].lower() == dataset_name.lower():
-                # Remove any brackets or references from number fields
-                return {
-                    "avg_edges": float(cols[5]),
-                    "node_labels": cols[6] == '+',
-                    "edge_labels": cols[7] == '+',
-                    "node_attr": cols[8][3:-1] if cols[8].startswith('+') else None,
-                    "geometry": cols[9] if cols[9] != '–' else None,
-                    "edge_attr": cols[10] == '+'
-                }
+        tables = soup.find_all("table")
+        if not tables:
+            raise ValueError("No tables found on the TUDataset description page.")
+        for table in tables:
+            
+            for row in table.find_all("tr")[2:]:
+                cols = [c.get_text(strip=True) for c in row.find_all(["th", "td"])]
+                if cols and cols[0].lower() == dataset_name.lower():
+                    # Remove any brackets or references from number fields
+                    return {
+                        "avg_edges": float(cols[5]),
+                        "node_labels": cols[6] == '+',
+                        "edge_labels": cols[7] == '+',
+                        "node_attr": cols[8][3:-1] if cols[8].startswith('+') else None,
+                        "geometry": cols[9] if cols[9] != '–' else None,
+                        "edge_attr": cols[10] == '+'
+                    }
 
         raise ValueError(f"Dataset '{dataset_name}' not found on the TUDataset description https://chrsmrrs.github.io/datasets/docs/datasets/.")
         
     
     def get_metadata(self) -> Dict[str, Any]:
+        """
+        Returns the metadata of the dataset, including number of graphs, classes, and node features.
+        """
         return self.metadata
 
     def describe(self) -> None:
-        print(f"Dataset: {self.name}")
+        """
+        Prints a description of the dataset, including the number of graphs, classes, and node features.
+        """
         for k, v in self.metadata.items():
             print(f"  {k}: {v}")
             
     def get_dataset(self) -> TUDataset:
+        """
+        Returns the loaded dataset.
+        """
         return self.dataset
 
     def __len__(self) -> int:
+        """
+        Returns the number of graphs in the dataset.
+        """
         return len(self.dataset)
     
     def __getitem__(self, idx: int) -> Data:
+        """
+        Returns a single graph from the dataset at the specified index.
+        Args:
+            idx (int): Index of the graph to retrieve.
+        Returns:
+            Data: The graph data object at the specified index.
+        """
         return self.dataset[idx]
     
     def __repr__(self) -> str:

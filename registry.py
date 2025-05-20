@@ -7,6 +7,12 @@ import torch
 
 
 class Registry():
+    """
+    A simple registry to register and retrieve objects by name.
+    This is useful for managing different components and simplifies the process of
+    instantiating them based on configuration files.
+    The registry can be used to register models, optimizers, and other components
+    """
     def __init__(self, name='default'):
         self.name = name
         self._registry = {}
@@ -36,6 +42,15 @@ class Registry():
         return len(self._registry)
     
 def build_module(cfg: dict, registry, **kwargs) -> object:
+    """
+    Build a module from a configuration dictionary.
+    Args:
+        cfg: Dictionary containing the configuration for the module.
+        registry: The registry to use for building the module.
+        **kwargs: Additional keyword arguments to pass to the module constructor.
+    Returns:
+        An instance of the module.
+    """
     cfg = cfg.copy()
     cfg.update(kwargs)
     cls = registry.get(cfg.pop('type'))
@@ -70,6 +85,15 @@ OPTIMIZERS = Registry('OPTIMIZERS')
 RUNNERS = Registry('RUNNERS')
 
 def register_from_module(module, registry, base_class=None, verbose=False, filter_fn=None):
+    """
+    Register classes from a module to a registry.
+    Args:
+        module: The module to register classes from.
+        registry: The registry to register the classes to.
+        base_class: The base class that the registered classes should inherit from.
+        verbose: Whether to print the registration process.
+        filter_fn: A function to filter the classes to be registered.
+    """
 
     for name in dir(module):  # Use dir to get full visible symbol list
         try:
