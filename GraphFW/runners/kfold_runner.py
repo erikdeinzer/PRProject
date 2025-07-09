@@ -26,13 +26,11 @@ class KFoldRunner(BaseRunner):
 
         if hasattr(self, 'train_data') and len(self.train_data) > 1000:
             print(f"Warning: Dataset is large ({len(self.train_data)} samples). Consider using a smaller number of folds for faster training or use Train Test Split (SplitRunner).")
-        
-        fold_hist = {
-                'train_loss': [],
-                'val_loss': [],
-                'val_acc': []
-            }
-        self.history = [fold_hist for _ in range(self.n_splits)]
+        # Fix: create independent history dicts for each fold
+        self.history = [
+            {'train_loss': [], 'val_loss': [], 'val_acc': []}
+            for _ in range(self.n_splits)
+        ]
 
     def train(self, start_epoch=None, epochs=None):
         epochs = epochs or self.train_epochs
@@ -42,8 +40,8 @@ class KFoldRunner(BaseRunner):
         y = [data.y.item() for data in self.dataset]
         for i, (train_idx, test_idx) in enumerate(self.skf.split(self.dataset, y)):
             print(f"\nFold {i + 1}/{self.n_splits}")
-            train_set = [self.dataset[i] for i in train_idx]
-            test_set = [self.dataset[i] for i in test_idx]
+            train_set = [self.dataset[j] for j in train_idx]
+            test_set = [self.dataset[j] for j in test_idx]
 
             model = self.models[i].to(self.device)
             optimizer = self.optimizers[i]
@@ -60,11 +58,18 @@ class KFoldRunner(BaseRunner):
                     self.history[i]['val_loss'].append(val_loss)
                     self.history[i]['val_acc'].append(acc)
                 
-                if self._check_abort(self.history[i]):
-                    print("\nEarly stopping triggered.")
-                    break
+                # Only check abort if enough values in history
+                if len(self.history[i][self.metric]) >= self.patience + 1:
+                    if self._check_abort(self.history[i]):
+                        print("\nEarly stopping triggered.")
+                        break
                 if self._check_saving(self.history[i]):
-                    self.save_model(filename=f'fold_{i + 1}_ckpt_{self.metric}_{self.history[i][self.metric][-1]:.4f}.pth', history=self.history[i], optimizer=optimizer, model=model)
+                    metric_value = self.history[i][self.metric][-1]
+                    self.save_model(
+                        filename=f'fold_{i + 1}_epoch_{epoch}_ckpt_{self.metric}_{metric_value:.4f}.pth', 
+                        history=self.history[i], 
+                        optimizer=optimizer, 
+                        model=model)
             print()
             accuracies.append(acc)
         avg_acc = sum(accuracies) / len(accuracies)
