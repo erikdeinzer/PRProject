@@ -1,31 +1,55 @@
-dataset_config = {
-    "name": "MUTAG",
-    "root": "./data",
-    "transforms": [{"type": "ToUndirected"}],
-}
+dataset_name = 'MUTAG'
 
-model_config = {
-    'type': 'GCNv2',
-    'in_channels': 7,  # Number of input features - auto chooses the input features from the dataset
-    'hidden_channels': 64,
-    'out_channels': 2,  # Number of classes
-}
+model = dict(
+    type='GCNv2',
+    in_channels=7,
+    hidden_channels=64,
+    out_channels=2,
+)
 
-optim_config = {
-    "type": "Adam",
-    "lr": 0.01,
-    "weight_decay": 5e-4,
-}
+dataset = dict(
+    type='TUDatasetLoader',
+    name=dataset_name,
+    root='./data',
+    transforms=[
+        dict(type='ToUndirected'),
+        dict(type='NormalizeFeatures'),
+        dict(type='RandomNodeSplit'),
+    ],
+)
 
-split_cfg = {
-    "type": "KFoldRunner",
-    "num_folds": 5,
-    "shuffle": True,
-    "random_state": 42,
-}
+optimizer = dict(
+    type='Adam',
+    lr=0.01,
+    weight_decay=5e-4,
+)
 
-train_config = {
-    "batch_size": 32,
-    "num_epochs": 100,
-    "optimizer": optim_config
-}
+train_dataloader = dict(
+    batch_size=32,
+    shuffle=True,
+)
+
+val_dataloader = dict(
+    batch_size=64,
+    shuffle=False,
+)
+
+test_dataloader = dict(
+    batch_size=64,
+    shuffle=False,
+)
+
+
+runner = dict(
+    type='KFoldRunner',
+    s_splits=5,
+    epochs='inf',
+    train_ratio=0.8,
+    val_interval=1,
+    train_dataloader=train_dataloader,
+    val_dataloader=val_dataloader,
+    test_dataloader=test_dataloader,
+    log_interval = 1,
+    patience=20,
+    abort_condition=0.01,
+)

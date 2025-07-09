@@ -1,0 +1,12 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"type": "shell",
+			"label": "Run train.py",
+			"command": "python train.py --config configs/mutag/mutag_kfold.py",
+			"group": "build",
+			"isBackground": false
+		}
+	]
+}

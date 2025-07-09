@@ -3,9 +3,9 @@ import torch.nn as nn
 import torch_geometric as pyg
 from torch_geometric.nn import GINConv, global_add_pool
 import torch.nn.functional as F
-from registry import MODELS
+from GraphFW.build import MODULES
 
-@MODELS.register(type='GINv2')
+@MODULES.register_module(type='GINv2')
 class GINv2(nn.Module):
     def __init__(self, in_channels, out_channels, hidden_channels=64, num_layers=4):
         """

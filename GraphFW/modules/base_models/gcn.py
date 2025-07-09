@@ -2,9 +2,9 @@ import torch_geometric.nn as nn
 import torch
 import torch.nn.functional as F
 
-from registry import MODELS
+from GraphFW.build import MODULES
 
-@MODELS.register(type='GCNv2')
+@MODULES.register_module(type='GCNv2')
 class GCNv2(torch.nn.Module):
     def __init__(self, in_channels, out_channels, hidden_channels=64, num_layers=4):
         super(GCNv2, self).__init__()
