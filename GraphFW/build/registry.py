@@ -6,20 +6,21 @@ import torch_geometric.nn as nn
 import torch
 
 
+
 class Registry():
     """
     A simple registry to register and retrieve objects by name.
     This is useful for managing different components and simplifies the process of
     instantiating them based on configuration files.
-    The registry can be used to register models, optimizers, and other components
+    The registry can be used to register MODULES, optimizers, and other components
     """
     def __init__(self, name='default'):
         self.name = name
         self._registry = {}
 
-    def register(self, obj=None, *, type=None):
+    def register_module(self, obj=None, *, type=None):
         if obj is None:
-            return lambda obj: self.register(obj, type=type)
+            return lambda obj: self.register_module(obj, type=type)
         key = type or obj.__name__
         if key in self._registry:
             raise ValueError('Duplicate registrations with same name not possible')
@@ -41,7 +42,17 @@ class Registry():
     def __len__(self):
         return len(self._registry)
     
-def build_module(cfg: dict, registry, **kwargs) -> object:
+
+MODULES = Registry('MODULES')
+EVALUATORS = Registry('EVALUATIONS')
+TRANSFORMS = Registry('TRANSFORMS')
+OPTIMIZERS = Registry('OPTIMIZERS')
+DATASETS = Registry('DATASETS')
+RUNNERS = Registry('RUNNERS')
+
+
+
+def build_module_from_registry(cfg: dict, registry, **kwargs) -> object:
     """
     Build a module from a configuration dictionary.
     Args:
@@ -52,37 +63,34 @@ def build_module(cfg: dict, registry, **kwargs) -> object:
         An instance of the module.
     """
     cfg = cfg.copy()
+
     cfg.update(kwargs)
     cls = registry.get(cfg.pop('type'))
     return cls(**cfg)
 
-def build_modules_list(cfg: List[dict], registry:Registry, compose_fn:Callable | None = None, **kwargs) -> List[object]:
-    """
-    Build a list of modules from a list of configuration dictionaries.
-
-    Args:
-        cfg: List of dictionaries containing the configuration for each module.
-        registry: The registry to use for building the modules.
-        compose_fn: A function to compose the modules together.
-        **kwargs: Additional keyword arguments to pass to the module constructors.
-
-    Returns:
-        A tuple of instantiated modules
-    """
-    modules = []
-    for module_cfg in cfg:
-        module = build_module(module_cfg, registry, **kwargs)
-        modules.append(module)
-    if compose_fn is None:
-        return tuple(modules)
+def build_module(module, registry=None,**kwargs):
+    if isinstance(module, torch.nn.Module):
+        return module
+    elif isinstance(module, dict):
+        cls = module.get('type')
+        if isinstance(cls, type):
+            params = {k: v for k, v in module.items() if k != 'type'}
+            return cls(**params, **kwargs)
+        if isinstance(cls, str):
+            if registry is None:
+                raise ValueError("Registry must be provided for string type modules.")
+            mod = build_module_from_registry(module, registry, **kwargs)
+            if mod is None:
+                raise ValueError(f"Module '{cls}' not found in the registry.")
+            return mod
     else:
-        compose_fn(modules)
-    
-MODELS = Registry('MODELS')
-EVALUATIONS = Registry('EVALUATIONS')
-TRANSFORMS = Registry('TRANSFORMS')
-OPTIMIZERS = Registry('OPTIMIZERS')
-RUNNERS = Registry('RUNNERS')
+        raise TypeError(f"Unsupported module type: {type(module)}. Expected nn.Module or dict.")
+
+
+
+
+
+
 
 def register_from_module(module, registry, base_class=None, verbose=False, filter_fn=None):
     """
@@ -111,19 +119,14 @@ def register_from_module(module, registry, base_class=None, verbose=False, filte
             continue
         try:
             inspect.signature(obj)  # Just test it's introspectable
-            registry.register(obj)
+            registry.register_module(obj)
             if verbose:
                 print(f"[{registry.name}] Registered: {name}")
         except Exception:
             continue
-# Register PyTorch Geometric models
-register_from_module(pyg.nn, MODELS, base_class=torch.nn.Module, verbose=False)
-# Register PyTorch Geometric transforms
-register_from_module(T, TRANSFORMS, base_class=T.BaseTransform, verbose=False)
+# Register PyTorch MODULES
+register_from_module(nn, MODULES, base_class=torch.nn.Module, verbose=False)
+# Register PyTorch transforms
+register_from_module(T, TRANSFORMS, verbose=False)
 # Register PyTorch optimizers
 register_from_module(torch.optim, OPTIMIZERS, base_class=torch.optim.Optimizer, verbose=False)
-
-
-
-
-

@@ -5,7 +5,7 @@ from torch_geometric.data import Data
 import torch_geometric.transforms as T
 from typing import Dict, Any
 import os
-from registry import TRANSFORMS, build_module, build_modules_list
+from GraphFW.build import TRANSFORMS, DATASETS, build_module
 from torch import nn
 
 from typing import Union, List, Callable
@@ -26,8 +26,8 @@ if ONLINE:
         print("No online stats available. Please install requests and BeautifulSoup4 to fetch online dataset statistics.")
 
 
-
-class DatasetLoader:
+@DATASETS.register_module(type='TUDatasetLoader')
+class TUDatasetLoader:
     def __init__(self, name: str, root: str = "./data", transforms=None, pre_transforms=None) -> None:
         """
         Initialize the DatasetLoader with a dataset name, root directory, and optional transformations.
@@ -43,10 +43,11 @@ class DatasetLoader:
         """
         self.name = name
         self.root = root
-        self.transforms = build_modules_list(transforms, TRANSFORMS, compose_fn=T.Compose) if transforms else None
-        self.pre_transforms = build_modules_list(pre_transforms, TRANSFORMS, compose_fn=T.Compose) if pre_transforms else None
+        self.transforms = T.Compose([build_module(t, TRANSFORMS) for t in transforms]) if transforms else None
+        self.pre_transforms = T.Compose([build_module(t, TRANSFORMS) for t in pre_transforms]) if pre_transforms else None
         self.dataset = TUDataset(root=self.root, name=self.name, transform=self.transforms, pre_transform=self.pre_transforms)
         self.metadata = self._extract_metadata()
+        self.num_features = self.dataset.num_features if hasattr(self.dataset, 'num_features') else None
 
     def _extract_metadata(self) -> Dict[str, Any]:
         """
