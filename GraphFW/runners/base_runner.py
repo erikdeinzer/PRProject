@@ -132,6 +132,8 @@ class BaseRunner:
                     posterior_vars = {'train_loss': total_loss / (i + 1), 'train_acc': acc}
                     progress_bar(prior_vars=prior_vars, posterior_vars=posterior_vars)
         return total_loss / len(train_loader)
+    
+
     def save_cfg(self, filename='config.yaml'):
         import yaml
         cfg = {
@@ -160,6 +162,7 @@ class BaseRunner:
             torch.save(model.state_dict(), os.path.join(self.save_dir, filename))
         print(f"Model saved to {os.path.join(self.save_dir, filename)}")
         return os.path.join(self.save_dir, filename)
+
 
     def run(self, mode='train', epochs=100, start_epoch=1):
         """

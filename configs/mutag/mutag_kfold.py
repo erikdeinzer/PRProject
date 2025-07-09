@@ -5,6 +5,7 @@ model = dict(
     in_channels=7,
     hidden_channels=64,
     out_channels=2,
+    num_layers=8
 )
 
 dataset = dict(
@@ -30,12 +31,12 @@ train_dataloader = dict(
 )
 
 val_dataloader = dict(
-    batch_size=64,
+    batch_size=1,
     shuffle=False,
 )
 
 test_dataloader = dict(
-    batch_size=64,
+    batch_size=1,
     shuffle=False,
 )
 

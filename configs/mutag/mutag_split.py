@@ -1,10 +1,11 @@
 dataset_name = 'MUTAG'
 
 model = dict(
-    type='GCNv2',
+    type='GATv2',
     in_channels=7,
     hidden_channels=64,
     out_channels=2,
+    n_heads=8
 )
 
 dataset = dict(
@@ -20,7 +21,7 @@ dataset = dict(
 
 optimizer = dict(
     type='Adam',
-    lr=0.01,
+    lr=0.0001,
     weight_decay=5e-4,
 )
 
@@ -45,4 +46,5 @@ runner = dict(
     val_interval=1,
     epochs='inf',
     log_interval = 1,
+    patience = 20,
 )
