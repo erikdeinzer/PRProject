@@ -1,40 +1,39 @@
 from torch.nn import Linear
 import torch
 from torch import nn
-import torch.nn.functional as F
-from torch_geometric.nn import GCNConv, GATConv
-from torch_geometric.nn import global_mean_pool
+from torch_geometric.nn import SAGEConv, global_mean_pool
 from GraphFW.build import MODULES
 
-
-class GATBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, n_heads, dropout, norm_layer, activation):
+# GraphSAGE block with normalization, activation, and dropout
+class GraphSAGEBlock(nn.Module):
+    def __init__(self, in_channels, out_channels, dropout_rate, norm_layer, activation):
         super().__init__()
-        self.gat = GATConv(in_channels, out_channels, heads=n_heads)
-        self.norm = norm_layer(out_channels * n_heads)
+        # Only pass in_channels and out_channels to SAGEConv
+        self.sage = SAGEConv(in_channels, out_channels)
+        self.norm = norm_layer(out_channels)
         self.act = activation
-        self.dropout = nn.Dropout(dropout)
+        self.dropout = nn.Dropout(dropout_rate)
 
     def forward(self, x, edge_index):
-        x = self.gat(x, edge_index)
+        x = self.sage(x, edge_index)
         x = self.norm(x)
         x = self.act(x)
         x = self.dropout(x)
         return x
-    
-class GATSkipBlock(nn.Module):
-    """GAT block with skip connection."""
-    def __init__(self, in_channels, out_channels, n_heads, dropout, norm_layer, activation):
+
+# GraphSAGE block with skip connection
+class GraphSAGESkipBlock(nn.Module):
+    def __init__(self, in_channels, out_channels, dropout, norm_layer, activation):
         super().__init__()
-        self.gat = GATConv(in_channels, out_channels, heads=n_heads)
-        self.norm = norm_layer(out_channels * n_heads)
+        self.sage = SAGEConv(in_channels, out_channels)
+        self.norm = norm_layer(out_channels)
         self.act = activation
         self.dropout = nn.Dropout(dropout)
-        self.residual = (in_channels == out_channels * n_heads)
+        self.residual = (in_channels == out_channels)
 
     def forward(self, x, edge_index):
         identity = x
-        x = self.gat(x, edge_index)
+        x = self.sage(x, edge_index)
         x = self.norm(x)
         x = self.act(x)
         x = self.dropout(x)
@@ -43,50 +42,51 @@ class GATSkipBlock(nn.Module):
         return x
 
 
-@MODULES.register_module(type='GATv2')
-class GATv2(nn.Module):
-    def __init__(self, 
+
+# Register the GraphSAGE model in the module registry
+@MODULES.register_module(type='GraphSAGEv2')
+class GraphSAGEv2(nn.Module):
+    def __init__(self,
                  in_channels,
-                 out_channels,  
-                 n_heads=1, 
+                 out_channels,
                  hidden_channels=64,
-                 num_layers=4, 
-                 norm='layer', 
-                 dropout_rate=0.0, 
-                 activation='elu', 
+                 num_layers=4,
+                 norm='layer',
+                 dropout_rate=0.0,
+                 activation='relu',
                  use_skip_conections =False,
                  **kwargs):
-        super(GATv2, self).__init__()
-
+        super(GraphSAGEv2, self).__init__()
+        # Remove unused kwargs to avoid passing them to SAGEConv
         norm_layer = self._get_normalization(norm)
         activation_fn = self._get_activation(activation)
 
-        BlockType = GATBlock if not use_skip_conections else GATSkipBlock
-
+        BlockType = GraphSAGEBlock if not use_skip_conections else GraphSAGESkipBlock
         self.layers = nn.ModuleList()
+        # First layer
         self.layers.append(
-            BlockType(in_channels, hidden_channels, n_heads, dropout_rate, norm_layer, activation_fn)
+            BlockType(in_channels, hidden_channels, dropout_rate, norm_layer, activation_fn)
         )
+        # Hidden layers
         for _ in range(num_layers):
             self.layers.append(
-                BlockType(hidden_channels * n_heads, hidden_channels, n_heads, dropout_rate, norm_layer, activation_fn)
+                BlockType(hidden_channels, hidden_channels, dropout_rate, norm_layer, activation_fn)
             )
-
-        self.final_conv = GATConv(hidden_channels * n_heads, out_channels, heads=1)
+        # Final layer
+        self.final_conv = SAGEConv(hidden_channels, out_channels)
         self.dropout = nn.Dropout(dropout_rate)
         self.pool = global_mean_pool
         self.lin = Linear(out_channels, out_channels)
 
-    def forward(self, x, edge_index, batch, training=True):
+    def forward(self, x, edge_index, batch):
         for layer in self.layers:
             x = layer(x, edge_index)
-
         x = self.final_conv(x, edge_index)
         x = self.pool(x, batch)
         x = self.dropout(x)
         x = self.lin(x)
         return x
-    
+
     def _get_activation(self, act):
         if act == 'relu':
             return nn.ReLU()
@@ -96,7 +96,7 @@ class GATv2(nn.Module):
             return nn.LeakyReLU(0.2)
         else:
             raise ValueError(f"Unsupported activation function: {act}")
-        
+
     def _get_normalization(self, norm):
         if norm == 'layer':
             return nn.LayerNorm
