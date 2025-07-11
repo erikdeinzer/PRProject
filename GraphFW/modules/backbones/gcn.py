@@ -78,22 +78,3 @@ class GCNv2(torch.nn.Module):
         for block in self.convs:
             x = block(x, edge_index)
         return x
-    
-    def _get_normalization(self, norm):
-        if norm == 'layer':
-            return nn.LayerNorm
-        elif norm == 'batch':
-            return nn.BatchNorm1d
-        elif norm == 'instance':
-            return nn.InstanceNorm1d
-        else:
-            raise ValueError(f"Unsupported normalization type: {norm}")
-    def _get_activation(self, act):
-        if act == 'relu':
-            return nn.ReLU()
-        elif act == 'elu':
-            return nn.ELU()
-        elif act == 'leaky_relu':
-            return nn.LeakyReLU(0.2)
-        else:
-            raise ValueError(f"Unsupported activation function: {act}")

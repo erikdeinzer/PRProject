@@ -13,7 +13,7 @@ class GATBlock(BasicBlock):
         super().__init__()
         self.gat = GATConv(in_channels, out_channels, heads=n_heads, concat=concat)
         self.norm = self._get_normalization(norm)(out_channels * n_heads) if norm is not None else nn.Identity()
-        self.act = self._get_activation(act) if act is not None else nn.Identity()
+        self.act = self._get_activation(act)() if act is not None else nn.Identity()
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x, edge_index):
@@ -80,8 +80,18 @@ class GATv2(nn.Module):
             self.layers.append(
                 make_block(hidden_channels * n_heads, hidden_channels)
             )
+        # Final layer without normalization and activation
+        final_block = lambda in_ch, out_ch, nh=1, concat=False: BlockType(
+            in_channels=in_ch, 
+            out_channels=out_ch, 
+            n_heads=nh, 
+            dropout=dropout_rate, 
+            norm=None,  # No normalization on final layer
+            act=None,   # No activation on final layer
+            concat=concat
+        )
         self.layers.append(
-            make_block(hidden_channels * n_heads, out_channels, 1, concat=False)
+            final_block(hidden_channels * n_heads, out_channels, 1, concat=False)
         )
                 
 

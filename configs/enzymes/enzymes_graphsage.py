@@ -42,8 +42,8 @@ dataset = dict(
 
 optimizer = dict(
     type='Adam',
-    lr=0.01,
-    weight_decay=5e-4,
+    lr=0.001,  # Reduced from 0.01
+    weight_decay=1e-5,  # Reduced weight decay
 )
 
 lr_scheduler = dict(
@@ -69,10 +69,10 @@ test_dataloader = dict(
 
 runner = dict(
     type='SplitRunner',
-    train_ratio=0.8,
+    train_ratio=0.6,  # Better split ratio
     val_interval=1,
     epochs='inf',
     log_interval = 1,
-    patience = 50,
+    patience = 20,  # Reduced patience
     lr_scheduler=lr_scheduler,  # Pass scheduler config to runner
 )

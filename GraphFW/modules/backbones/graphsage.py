@@ -80,9 +80,16 @@ class GraphSAGEv2(nn.Module):
             self.layers.append(
                 make_block(hidden_channels, hidden_channels)
             )
-        # Final layer
+        # Final layer without activation and normalization
+        final_block = lambda in_c, out_c: BlockType(
+            in_channels=in_c, 
+            out_channels=out_c, 
+            dropout_rate=dropout_rate, 
+            norm=None,    # No normalization on final layer
+            act=None      # No activation on final layer
+        )
         self.layers.append(
-            make_block(hidden_channels, out_channels)
+            final_block(hidden_channels, out_channels)
         )
         
 

@@ -37,7 +37,7 @@ class GINBlock(BasicBlock):
 
         self.conv = GINConv(self.mlp)
         
-        self.norm = self._get_normalization(norm) if norm is not None else nn.Identity()
+        self.norm = self._get_normalization(norm)(out_channels) if norm is not None else nn.Identity()
         self.act = self._get_activation(act)() if act is not None else nn.Identity()
         self.dropout = nn.Dropout(dropout)
 
@@ -87,7 +87,16 @@ class GINv2(nn.Module):
         for _ in range(num_layers - 2):
             self.convs.append(make_block(hidden_channels, hidden_channels))
         
-        self.convs.append(make_block(hidden_channels, out_channels))
+        # Final layer without activation and normalization for better classification
+        final_block = lambda in_c, out_c: GINBlock(
+            in_channels=in_c, 
+            out_channels=out_c, 
+            hidden_channels=hidden_channels,  # Need hidden_channels parameter
+            dropout=dropout_rate, 
+            norm=None,  # No normalization on final layer
+            act=None    # No activation on final layer  
+        )
+        self.convs.append(final_block(hidden_channels, out_channels))
 
     def forward(self, x, edge_index, batch=None):
         for block in self.convs:
