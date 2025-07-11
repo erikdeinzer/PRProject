@@ -1,1 +1,3 @@
-from .base_models import *
+from .backbones import *
+from .heads import *
+from .models import *

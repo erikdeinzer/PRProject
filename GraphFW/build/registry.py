@@ -49,6 +49,7 @@ TRANSFORMS = Registry('TRANSFORMS')
 OPTIMIZERS = Registry('OPTIMIZERS')
 DATASETS = Registry('DATASETS')
 RUNNERS = Registry('RUNNERS')
+SCHEDULERS = Registry('SCHEDULERS')
 
 
 
@@ -130,3 +131,6 @@ register_from_module(nn, MODULES, base_class=torch.nn.Module, verbose=False)
 register_from_module(T, TRANSFORMS, verbose=False)
 # Register PyTorch optimizers
 register_from_module(torch.optim, OPTIMIZERS, base_class=torch.optim.Optimizer, verbose=False)
+# Register PyTorch schedulers
+import torch.optim.lr_scheduler as sched
+register_from_module(sched, SCHEDULERS, verbose=False)

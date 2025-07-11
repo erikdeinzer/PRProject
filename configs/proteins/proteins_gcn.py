@@ -1,10 +1,10 @@
 # Config for GraphSAGE on ENZYMES dataset
 # Adjust parameters as needed for your experiments
-dataset_name = 'MUTAG'
+dataset_name = 'PROTEINS'
 
 backbone = dict(
-    type='GraphSAGEv2',
-    in_channels=7,  # Set according to your dataset
+    type='GCNv2',
+    in_channels=4,  # Set according to your dataset
     out_channels=64, # Set according to your dataset
     hidden_channels=64,
     num_layers=5,
@@ -42,7 +42,7 @@ dataset = dict(
 
 optimizer = dict(
     type='Adam',
-    lr=0.001,
+    lr=0.05,
     weight_decay=5e-4,
 )
 

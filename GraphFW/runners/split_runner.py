@@ -1,10 +1,11 @@
-from GraphFW.build import RUNNERS, MODULES, OPTIMIZERS, build_module
+from GraphFW.build import RUNNERS, MODULES, OPTIMIZERS, SCHEDULERS, build_module
 from .base_runner import BaseRunner
 from .utils.progress_bar import progress_bar
 from torch_geometric.loader import DataLoader
 import torch
 from sklearn.model_selection import train_test_split
 
+import os
 
 @RUNNERS.register_module(type='SplitRunner')
 class SplitRunner(BaseRunner):
@@ -17,6 +18,10 @@ class SplitRunner(BaseRunner):
 
         self.model = build_module(self.model_cfg, MODULES)
         self.optimizer = build_module(self.optim_cfg, OPTIMIZERS, params=self.model.parameters())
+
+        if self.scheduler_cfg is not None:
+            scheduler_cfg = self.scheduler_cfg.copy()
+            self.scheduler = build_module(scheduler_cfg, SCHEDULERS, optimizer=self.optimizer)
 
         indices = list(range(len(self.dataset)))
         train_idx, test_idx = train_test_split(
@@ -43,6 +48,7 @@ class SplitRunner(BaseRunner):
 
         acc = 0
         
+        last_file = None
         for epoch in range(start_epoch, epochs + 1):
             print()
             avg_loss = self._train_epoch(self.model, train_loader, self.optimizer, epoch, total_epochs=epochs)
@@ -57,7 +63,11 @@ class SplitRunner(BaseRunner):
                 print("\nEarly stopping triggered.")
                 break
             if self._check_saving():
-                    self.save_model(filename=f'best_ckpt_{self.metric}_{self.history[self.metric][-1]:.4f}.pth')
+                if last_file:
+                    os.remove(last_file)    
+                filename = f'best_ckpt_{self.metric}_{self.history[self.metric][-1]:.4f}.pth'
+                last_file = self.save_model(filename=filename)
+                
 
         
         print("\nFinal evaluation:")

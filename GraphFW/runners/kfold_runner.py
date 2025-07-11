@@ -1,4 +1,4 @@
-from GraphFW.build import RUNNERS, MODULES, OPTIMIZERS, build_module
+from GraphFW.build import RUNNERS, MODULES, OPTIMIZERS, SCHEDULERS, build_module
 from .base_runner import BaseRunner
 from .utils.progress_bar import progress_bar
 from torch_geometric.loader import DataLoader
@@ -23,6 +23,10 @@ class KFoldRunner(BaseRunner):
             self.models.append(model)
             optimizer = build_module(self.optim_cfg, OPTIMIZERS, params=model.parameters())
             self.optimizers.append(optimizer)
+            if self.scheduler is not None:
+                # Remove 'type' from config and pass optimizer as first argument
+                scheduler_cfg = self.scheduler.copy()
+                self.scheduler = build_module(scheduler_cfg, SCHEDULERS, optimizer=optimizer)
 
         if hasattr(self, 'train_data') and len(self.train_data) > 1000:
             print(f"Warning: Dataset is large ({len(self.train_data)} samples). Consider using a smaller number of folds for faster training or use Train Test Split (SplitRunner).")

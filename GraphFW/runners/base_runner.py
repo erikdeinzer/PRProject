@@ -35,6 +35,7 @@ class BaseRunner:
                  log_interval=1,
                  shuffle=True,
                  start_epoch=1,
+                 lr_scheduler=None,
                  **kwargs):
         """
         Initialize the runner with configs for model, data, and training.
@@ -80,11 +81,12 @@ class BaseRunner:
 
         self.device = torch.device(device)
 
-        self.criterion = getattr(model, 'criterion', torch.nn.CrossEntropyLoss())
+        self.criterion = torch.nn.CrossEntropyLoss()
         ds_loader = build_module(self.dataset_cfg, DATASETS)
         self.dataset = ds_loader.dataset if hasattr(ds_loader, 'dataset') else ds_loader
 
-
+        self.scheduler_cfg = lr_scheduler
+        self.scheduler=None
         # Early Stopping and Model Saving
         self.work_dir = work_dir
         self.patience = patience
@@ -113,26 +115,31 @@ class BaseRunner:
 
     def _train_epoch(self, model, train_loader, optimizer, epoch, total_epochs=None):
         model.train()
+        
         total_loss = 0.
         prior_vars = {
             'total_epochs': total_epochs if total_epochs is not None else 'inf',
             'total_iterations': len(train_loader),
         }
         for i, batch in enumerate(train_loader):
-                batch = batch.to(self.device)
-                optimizer.zero_grad()
-                out = model(batch.x, batch.edge_index, batch.batch)
-                loss = self.criterion(out, batch.y)
-                loss.backward()
-                optimizer.step()
-                total_loss += loss.item()
-                if self.log_interval and (i % self.log_interval == 0 or i == len(train_loader)):
-                    acc = out.argmax(dim=1).eq(batch.y).sum().item() / batch.num_graphs
-                    prior_vars.update({'epoch': epoch, 'iteration': i+1})
-                    posterior_vars = {'train_loss': total_loss / (i + 1), 'train_acc': acc}
-                    progress_bar(prior_vars=prior_vars, posterior_vars=posterior_vars)
+            batch = batch.to(self.device)
+            optimizer.zero_grad()
+            out = model(batch.x, batch.edge_index, batch.batch)
+            loss = self.criterion(out, batch.y)
+            loss.backward()
+            optimizer.step()
+            total_loss += loss.item()
+            if self.log_interval and (i % self.log_interval == 0 or i == len(train_loader)):
+                acc = out.argmax(dim=1).eq(batch.y).sum().item() / batch.num_graphs
+                prior_vars.update({'epoch': epoch, 'iteration': i+1})
+                current_lr = optimizer.param_groups[0]['lr']
+                posterior_vars = {'lr': current_lr, 'train_loss': total_loss / (i + 1), 'train_acc': acc}
+                progress_bar(prior_vars=prior_vars, posterior_vars=posterior_vars)
+
+        if self.scheduler is not None:
+            self.scheduler.step()
+
         return total_loss / len(train_loader)
-    
 
     def save_cfg(self, filename='config.yaml'):
         import yaml
@@ -164,13 +171,16 @@ class BaseRunner:
         return os.path.join(self.save_dir, filename)
 
 
-    def run(self, mode='train', epochs=100, start_epoch=1):
+    def run(self, mode='train', epochs=None, start_epoch=None):
         """
         Run the model on the data.
 
         Returns:
             The result of the run.
         """
+        epochs = epochs or self.train_epochs
+        start_epoch = start_epoch or self.start_epoch
+        
         if mode == 'train':
             return self.train(start_epoch, epochs)
         elif mode == 'validation':
@@ -215,7 +225,13 @@ class BaseRunner:
             raise ValueError("direction must be 'min' or 'max'")
     
     def train(self, epochs, start_epoch=None):
-        raise NotImplementedError("This method should be implemented in subclasses.")
+        epochs = epochs or self.train_epochs
+        start_epoch = start_epoch or self.start_epoch
+        for epoch in range(start_epoch, epochs + 1):
+            train_loss = self._train_epoch(self.model, self.train_dataloader, self.optimizer, epoch, total_epochs=epochs)
+            # ...validation, logging, etc. (existing code)...
+            if self.scheduler is not None:
+                self.scheduler.step()
 
     def predict(self, data, batch_size=1, loss=True):
         raise NotImplementedError("This method should be implemented in subclasses.")

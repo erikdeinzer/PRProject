@@ -28,7 +28,7 @@ if ONLINE:
 
 @DATASETS.register_module(type='TUDatasetLoader')
 class TUDatasetLoader:
-    def __init__(self, name: str, root: str = "./data", transforms=None, pre_transforms=None) -> None:
+    def __init__(self, name: str, root: str = "./data", transforms=None, pre_transforms=None, **kwargs) -> None:
         """
         Initialize the DatasetLoader with a dataset name, root directory, and optional transformations.
         This class loads the dataset using PyTorch Geometric's TUDataset and applies the specified transformations.
@@ -45,9 +45,16 @@ class TUDatasetLoader:
         self.root = root
         self.transforms = T.Compose([build_module(t, TRANSFORMS) for t in transforms]) if transforms else None
         self.pre_transforms = T.Compose([build_module(t, TRANSFORMS) for t in pre_transforms]) if pre_transforms else None
-        self.dataset = TUDataset(root=self.root, name=self.name, transform=self.transforms, pre_transform=self.pre_transforms)
+        self.dataset = TUDataset(
+            root=self.root, 
+            name=self.name, 
+            transform=self.transforms, 
+            pre_transform=self.pre_transforms,
+            **kwargs)
         self.metadata = self._extract_metadata()
         self.num_features = self.dataset.num_features if hasattr(self.dataset, 'num_features') else None
+
+        self.describe()
 
     def _extract_metadata(self) -> Dict[str, Any]:
         """

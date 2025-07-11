@@ -3,11 +3,11 @@
 dataset_name = 'MUTAG'
 
 backbone = dict(
-    type='GraphSAGEv2',
+    type='GCNv2',
     in_channels=7,  # Set according to your dataset
     out_channels=64, # Set according to your dataset
     hidden_channels=64,
-    num_layers=5,
+    num_layers=3,
     norm='layer',
     dropout_rate=0.2,
     act='relu',
@@ -42,7 +42,7 @@ dataset = dict(
 
 optimizer = dict(
     type='Adam',
-    lr=0.001,
+    lr=0.05,
     weight_decay=5e-4,
 )
 
