@@ -64,7 +64,15 @@ class GCNv2(torch.nn.Module):
         for _ in range(num_layers - 2):
             self.convs.append(make_block(hidden_channels, hidden_channels))
         
-        self.convs.append(make_block(hidden_channels, out_channels))
+        # Final layer without activation and normalization for better classification
+        final_block = lambda in_c, out_c: GCNBlock(
+            in_channels=in_c, 
+            out_channels=out_c, 
+            dropout=dropout_rate, 
+            norm=None,  # No normalization on final layer
+            act=None    # No activation on final layer  
+        )
+        self.convs.append(final_block(hidden_channels, out_channels))
 
     def forward(self, x, edge_index, batch=None):
         for block in self.convs:

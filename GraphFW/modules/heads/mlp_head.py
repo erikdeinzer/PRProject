@@ -42,8 +42,15 @@ class MLPHead(nn.Module):
         # Hidden layers
         for _ in range(num_layers - 2):
             layers.append(make_block(hidden_channels, hidden_channels))
-        # Output layer  
-        layers.append(make_block(hidden_channels, out_channels))
+        # Output layer without activation and normalization
+        final_layer = PerceptronLayer(
+            in_features=hidden_channels,
+            out_features=out_channels,
+            dropout_rate=0.0,  # No dropout on final layer
+            act=None,          # No activation on final layer
+            norm=None          # No normalization on final layer
+        )
+        layers.append(final_layer)
         
         self.mlp = nn.Sequential(*layers)
 

@@ -7,6 +7,7 @@ from typing import Dict, Any
 import os
 from GraphFW.build import TRANSFORMS, DATASETS, build_module
 from torch import nn
+from create_synthetic_data import SyntheticDataset
 
 from typing import Union, List, Callable
 import requests
@@ -45,12 +46,21 @@ class TUDatasetLoader:
         self.root = root
         self.transforms = T.Compose([build_module(t, TRANSFORMS) for t in transforms]) if transforms else None
         self.pre_transforms = T.Compose([build_module(t, TRANSFORMS) for t in pre_transforms]) if pre_transforms else None
-        self.dataset = TUDataset(
-            root=self.root, 
-            name=self.name, 
-            transform=self.transforms, 
-            pre_transform=self.pre_transforms,
-            **kwargs)
+        
+        # Use synthetic dataset for testing
+        if name == 'SYNTHETIC':
+            self.dataset = SyntheticDataset(
+                root=self.root, 
+                name=self.name,
+                transform=self.transforms, 
+                pre_transform=self.pre_transforms)
+        else:
+            self.dataset = TUDataset(
+                root=self.root, 
+                name=self.name, 
+                transform=self.transforms, 
+                pre_transform=self.pre_transforms,
+                **kwargs)
         self.metadata = self._extract_metadata()
         self.num_features = self.dataset.num_features if hasattr(self.dataset, 'num_features') else None
 

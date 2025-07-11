@@ -24,15 +24,25 @@ class SplitRunner(BaseRunner):
             self.scheduler = build_module(scheduler_cfg, SCHEDULERS, optimizer=self.optimizer)
 
         indices = list(range(len(self.dataset)))
-        train_idx, test_idx = train_test_split(
+        train_idx, temp_idx = train_test_split(
             indices,
             train_size=self.train_ratio,
             stratify=[data.y.item() for data in self.dataset],
             shuffle=self.shuffle,
             random_state=kwargs.get('seed', None)
         )
+        
+        # Split remaining data into validation and test sets (50%-50%)
+        val_idx, test_idx = train_test_split(
+            temp_idx,
+            train_size=0.5,  # 50% of remaining for validation
+            stratify=[self.dataset[i].y.item() for i in temp_idx],
+            shuffle=self.shuffle,
+            random_state=kwargs.get('seed', None)
+        )
 
         self.train_set = [self.dataset[i] for i in train_idx]
+        self.val_set = [self.dataset[i] for i in val_idx]
         self.test_set = [self.dataset[i] for i in test_idx]
 
         if len(indices) < 500:
@@ -54,7 +64,7 @@ class SplitRunner(BaseRunner):
             avg_loss = self._train_epoch(self.model, train_loader, self.optimizer, epoch, total_epochs=epochs)
             self.history['train_loss'].append(avg_loss)
             if epoch % self.val_interval == 0:
-                acc, val_loss = self.evaluate(model=self.model, data=self.test_set)
+                acc, val_loss = self.evaluate(model=self.model, data=self.val_set)
                 self.history['val_loss'].append(val_loss)
                 self.history['val_acc'].append(acc)
             
@@ -77,7 +87,7 @@ class SplitRunner(BaseRunner):
 
     def predict(self, loss=True):
         self.model.eval()
-        val_loader = DataLoader(self.test_set, **self.val_dataloader)
+        val_loader = DataLoader(self.val_set, **self.val_dataloader)
         preds = []
         losses = []
         with torch.no_grad():

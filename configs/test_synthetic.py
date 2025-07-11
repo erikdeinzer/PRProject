@@ -1,23 +1,25 @@
-# Config for GraphSAGE on ENZYMES dataset
-# Adjust parameters as needed for your experiments
-dataset_name = 'PROTEINS'
+# Config for testing GCN with synthetic dataset
+# This config uses synthetic data to test model training without internet
+
+dataset_name = 'SYNTHETIC'
 
 backbone = dict(
     type='GCNv2',
-    in_channels=4,  # Set according to your dataset
-    out_channels=64, # Set according to your dataset
+    in_channels=4,  # Set according to synthetic dataset
+    out_channels=64,
     hidden_channels=64,
-    num_layers=5,
+    num_layers=3,
     norm='layer',
     dropout_rate=0.2,
     act='relu',
 )
+
 head = dict(
     type='MLPHead',
     in_channels=64,  # Output channels of the backbone
-    out_channels=2,  # Number of classes in ENZYMES dataset
+    out_channels=2,  # Number of classes in synthetic dataset
     hidden_channels=64,
-    num_layers=4,
+    num_layers=2,
     norm='layer',
     dropout_rate=0.2,
 )
@@ -26,7 +28,7 @@ model = dict(
     type='BaseOneStage',
     backbone=backbone,
     head=head,
-    pooling = 'mean',
+    pooling='mean',
 )
 
 dataset = dict(
@@ -42,13 +44,13 @@ dataset = dict(
 
 optimizer = dict(
     type='Adam',
-    lr=0.001,  # Reduced from 0.05 to prevent overshooting
-    weight_decay=1e-5,  # Reduced weight decay for better learning
+    lr=0.001,  # Much lower learning rate
+    weight_decay=1e-5,  # Reduced weight decay
 )
 
 lr_scheduler = dict(
-    type='StepLR',  # Any torch.optim.lr_scheduler.* class
-    step_size=3,
+    type='StepLR',
+    step_size=10,
     gamma=0.9,
 )
 
@@ -58,22 +60,22 @@ train_dataloader = dict(
 )
 
 val_dataloader = dict(
-    batch_size=1,
+    batch_size=32,
     shuffle=False,
 )
 
 test_dataloader = dict(
-    batch_size=1,
+    batch_size=32,
     shuffle=False,
 )
 
 runner = dict(
     type='SplitRunner',
-    train_ratio=0.6,  # 60% train, 20% val, 20% test - better split
+    train_ratio=0.6,  # 60% train, 20% val, 20% test
     val_interval=1,
-    epochs='inf',
-    log_interval = 1,
-    patience = 20,  # Increased patience for better training  
+    epochs=50,  # Fewer epochs for testing
+    log_interval=1,
+    patience=10,
     abort_condidtion=0.01,
-    lr_scheduler=lr_scheduler,  # Pass scheduler config to runner
+    lr_scheduler=lr_scheduler,
 )
