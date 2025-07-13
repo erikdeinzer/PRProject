@@ -66,8 +66,8 @@ class SplitRunner(BaseRunner):
             if self._check_saving():
                 if last_file:
                     os.remove(last_file)    
-                filename = f'best_ckpt_{self.metric}_{self.history[self.metric][-1]:.4f}.pth'
-                last_file = self.save_model(filename=filename)
+                filename = f'best_ckpt_{self.metric}_{self.history[self.metric][-1]:.4f}'
+                last_file = self.save_model(name=filename)
             
             self.write_history_to_csv(self.history, filename=f'history.csv')
 

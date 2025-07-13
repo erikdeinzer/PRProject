@@ -74,8 +74,8 @@ class KFoldRunner(BaseRunner):
                 if self._check_saving(history=self.history[i]):
                     if last_file:
                         os.remove(last_file)    
-                    filename = f'fold_{i}_{self.metric}_{self.history[i][self.metric][-1]:.4f}.pth'
-                    last_file = self.save_model(filename=filename, history=self.history[i], optimizer=optimizer, model=model)
+                    filename = f'fold_{i}_{self.metric}_{self.history[i][self.metric][-1]:.4f}'
+                    last_file = self.save_model(name=filename, optimizer=optimizer, model=model)
                 
                 # write a csv file with the history of the fold
                 self.write_history_to_csv(self.history[i], filename=f'history_fold_{i}.csv')
