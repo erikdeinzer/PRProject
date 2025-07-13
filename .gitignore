@@ -7,3 +7,7 @@
 *.yaml
 
 work_dirs/*
+
+# Test files
+test_fixes.py
+FIX_SUMMARY.md
