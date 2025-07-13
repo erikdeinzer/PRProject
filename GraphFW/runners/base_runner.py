@@ -121,7 +121,8 @@ class BaseRunner:
             'total_epochs': total_epochs if total_epochs is not None else 'inf',
             'total_iterations': len(train_loader),
         }
-        total_acc = 0.0
+        total_samples = 0.0
+        total_correct = 0.0
         for i, batch in enumerate(train_loader):
             batch = batch.to(self.device)
             optimizer.zero_grad()
@@ -131,9 +132,10 @@ class BaseRunner:
             optimizer.step()
             total_loss += loss.item()
             if self.log_interval and (i % self.log_interval == 0 or i == len(train_loader)):
-                acc = out.argmax(dim=1).eq(batch.y).sum().item() / batch.num_graphs
-                total_acc += acc
-                mean_acc = total_acc / (i + 1)
+                correct = out.argmax(dim=1).eq(batch.y).sum().item()
+                total_correct += correct
+                total_samples += batch.num_graphs
+                mean_acc = total_correct / total_samples
                 prior_vars.update({'epoch': epoch, 'iteration': i+1})
                 current_lr = optimizer.param_groups[0]['lr']
                 posterior_vars = {'lr': f'{current_lr:.3e}', 'train_loss': total_loss / (i + 1), 'train_acc': mean_acc}
@@ -254,6 +256,7 @@ class BaseRunner:
         """
         model.eval()
         loader = DataLoader(data, **self.val_dataloader)
+
         correct = 0
         total = 0
         total_loss = 0.0
@@ -266,12 +269,13 @@ class BaseRunner:
                 loss = self.criterion(out, batch.y)
                 total_loss += loss.item()
                 pred = out.argmax(dim=1)
-                correct += (pred == batch.y).sum().item()
-                total += batch.y.size(0)
+                correct += pred.eq(batch.y).sum().item()
+                total += batch.num_graphs
+                val_acc = correct / total if total > 0 else 0.0
                 progress_bar(
                     prefix='\t Validation',
                     prior_vars={'iteration': i+1, 'total_iterations': len(loader)},
-                    posterior_vars={'val_loss': total_loss / (i + 1), 'val_acc': correct / (total + 1)},
+                    posterior_vars={'val_loss': total_loss / (i + 1), 'val_acc': val_acc},
                     style='arrow'
                 )
 

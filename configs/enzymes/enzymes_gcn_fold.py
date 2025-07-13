@@ -42,7 +42,7 @@ dataset = dict(
 
 optimizer = dict(
     type='Adam',
-    lr=0.01,
+    lr=0.001,
     weight_decay=1e-5,
 )
 

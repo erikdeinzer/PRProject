@@ -21,7 +21,7 @@ class KFoldRunner(BaseRunner):
         self.schedulers = []
 
         for _ in range(self.n_splits):
-            model = build_module(self.model_cfg, MODULES)
+            model = build_module(self.model_cfg, MODULES).to(self.device)
             self.models.append(model)
             optimizer = build_module(self.optim_cfg, OPTIMIZERS, params=model.parameters())
             self.optimizers.append(optimizer)

@@ -16,7 +16,7 @@ class SplitRunner(BaseRunner):
         super().__init__(**kwargs)
         self.train_ratio = train_ratio
 
-        self.model = build_module(self.model_cfg, MODULES)
+        self.model = build_module(self.model_cfg, MODULES).to(self.device)
         self.optimizer = build_module(self.optim_cfg, OPTIMIZERS, params=self.model.parameters())
 
         if self.scheduler_cfg is not None:
