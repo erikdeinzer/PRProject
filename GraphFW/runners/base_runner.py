@@ -121,7 +121,8 @@ class BaseRunner:
             'total_epochs': total_epochs if total_epochs is not None else 'inf',
             'total_iterations': len(train_loader),
         }
-        total_acc = 0.0
+        total_correct = 0
+        total_samples = 0
         for i, batch in enumerate(train_loader):
             batch = batch.to(self.device)
             optimizer.zero_grad()
@@ -131,9 +132,10 @@ class BaseRunner:
             optimizer.step()
             total_loss += loss.item()
             if self.log_interval and (i % self.log_interval == 0 or i == len(train_loader)):
-                acc = out.argmax(dim=1).eq(batch.y).sum().item() / batch.num_graphs
-                total_acc += acc
-                mean_acc = total_acc / (i + 1)
+                correct = out.argmax(dim=1).eq(batch.y).sum().item()
+                total_correct += correct
+                total_samples += batch.num_graphs
+                mean_acc = total_correct / total_samples
                 prior_vars.update({'epoch': epoch, 'iteration': i+1})
                 current_lr = optimizer.param_groups[0]['lr']
                 posterior_vars = {'lr': current_lr, 'train_loss': total_loss / (i + 1), 'train_acc': mean_acc}
@@ -228,14 +230,55 @@ class BaseRunner:
         else:
             raise ValueError("direction must be 'min' or 'max'")
     
-    def train(self, epochs, start_epoch=None):
+    def train(self, start_epoch=None, epochs=None):
+        """
+        Basic training loop for BaseRunner. This implementation assumes the model,
+        optimizer, and datasets are already set up by subclasses.
+        """
+        if not hasattr(self, 'model') or not hasattr(self, 'optimizer'):
+            raise NotImplementedError("BaseRunner.train() requires model and optimizer to be set by subclasses")
+        
         epochs = epochs or self.train_epochs
         start_epoch = start_epoch or self.start_epoch
+        
+        # Create dummy train/val data if not provided by subclass
+        if not hasattr(self, 'train_data'):
+            raise NotImplementedError("BaseRunner.train() requires train_data to be set by subclasses")
+        if not hasattr(self, 'val_data'):
+            raise NotImplementedError("BaseRunner.train() requires val_data to be set by subclasses")
+            
+        train_loader = DataLoader(self.train_data, **self.train_dataloader)
+        
+        last_file = None
         for epoch in range(start_epoch, epochs + 1):
-            train_loss = self._train_epoch(self.model, self.train_dataloader, self.optimizer, epoch, total_epochs=epochs)
-            # ...validation, logging, etc. (existing code)...
+            print()
+            avg_loss = self._train_epoch(self.model, train_loader, self.optimizer, epoch, total_epochs=epochs)
+            
+            self.history['train_loss'].append(avg_loss)
+            if epoch % self.val_interval == 0:
+                acc, val_loss = self.evaluate(model=self.model, data=self.val_data)
+                self.history['val_loss'].append(val_loss)
+                self.history['val_acc'].append(acc)
+            
+            if self._check_abort():
+                print()
+                print("\nEarly stopping triggered.")
+                break
+            if self._check_saving():
+                if last_file:
+                    os.remove(last_file)    
+                filename = f'best_ckpt_{self.metric}_{self.history[self.metric][-1]:.4f}.pth'
+                last_file = self.save_model(filename=filename)
+            
+            self.write_history_to_csv(self.history, filename=f'history.csv')
+            
             if self.scheduler is not None:
                 self.scheduler.step()
+        
+        print("\nFinal evaluation:")
+        final_acc, _ = self.evaluate(self.model, self.val_data)
+        print(f"Validation accuracy: {final_acc:.4f}")
+        return final_acc
 
     def predict(self, data, batch_size=1, loss=True):
         raise NotImplementedError("This method should be implemented in subclasses.")
@@ -271,7 +314,7 @@ class BaseRunner:
                 progress_bar(
                     prefix='\t Validation',
                     prior_vars={'iteration': i+1, 'total_iterations': len(loader)},
-                    posterior_vars={'val_loss': total_loss / (i + 1), 'val_acc': correct / (total + 1)},
+                    posterior_vars={'val_loss': total_loss / (i + 1), 'val_acc': correct / total if total > 0 else 0.0},
                     style='arrow'
                 )
 

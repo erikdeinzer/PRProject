@@ -16,7 +16,7 @@ class SplitRunner(BaseRunner):
         super().__init__(**kwargs)
         self.train_ratio = train_ratio
 
-        self.model = build_module(self.model_cfg, MODULES)
+        self.model = build_module(self.model_cfg, MODULES).to(self.device)
         self.optimizer = build_module(self.optim_cfg, OPTIMIZERS, params=self.model.parameters())
 
         if self.scheduler_cfg is not None:
@@ -67,7 +67,7 @@ class SplitRunner(BaseRunner):
                 if last_file:
                     os.remove(last_file)    
                 filename = f'best_ckpt_{self.metric}_{self.history[self.metric][-1]:.4f}.pth'
-                last_file = self.save_model(filename=filename)
+                last_file = self.save_model(name=filename)
             
             self.write_history_to_csv(self.history, filename=f'history.csv')
 
