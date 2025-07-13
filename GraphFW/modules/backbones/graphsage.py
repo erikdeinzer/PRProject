@@ -62,12 +62,12 @@ class GraphSAGEv2(nn.Module):
         self.act_fn = act
         BlockType = GraphSAGEBlock if not use_skip_connections else GraphSAGESkipBlock
 
-        make_block = lambda in_c, out_c: BlockType(
+        make_block = lambda in_c, out_c, norm = self.norm_fn, act = self.act_fn: BlockType(
             in_channels=in_c, 
             out_channels=out_c, 
             dropout_rate=dropout_rate, 
-            norm=self.norm_fn, 
-            act=self.act_fn
+            norm=norm, 
+            act=act
         )
 
         self.layers = nn.ModuleList()
@@ -82,7 +82,7 @@ class GraphSAGEv2(nn.Module):
             )
         # Final layer
         self.layers.append(
-            make_block(hidden_channels, out_channels)
+            SAGEConv(in_channels=hidden_channels, out_channels=out_channels)  # Last layer without activation or normalization
         )
         
 

@@ -9,12 +9,12 @@ from GraphFW.modules.basic_block import BasicBlock
 
 
 class GATBlock(BasicBlock):
-    def __init__(self, in_channels, out_channels, n_heads, dropout=0.0, norm=None, act=None, concat=False):
+    def __init__(self, in_channels, out_channels, n_heads, dropout_rate=0.0, norm=None, act=None, concat=False):
         super().__init__()
         self.gat = GATConv(in_channels, out_channels, heads=n_heads, concat=concat)
         self.norm = self._get_normalization(norm)(out_channels * n_heads) if norm is not None else nn.Identity()
-        self.act = self._get_activation(act) if act is not None else nn.Identity()
-        self.dropout = nn.Dropout(dropout)
+        self.act = self._get_activation(act)() if act is not None else nn.Identity()
+        self.dropout = nn.Dropout(dropout_rate)
 
     def forward(self, x, edge_index):
         x = self.gat(x, edge_index)
@@ -23,13 +23,13 @@ class GATBlock(BasicBlock):
         x = self.dropout(x)
         return x
     
-class GATSkipBlock(nn.Module):
+class GATSkipBlock(BasicBlock):
     """GAT block with skip connection."""
     def __init__(self, in_channels, out_channels, n_heads, dropout=0.0, norm=None, act=None, concat=False):
         super().__init__()
         self.gat = GATConv(in_channels, out_channels, heads=n_heads, concat=concat)
-        self.norm = norm(out_channels * n_heads) if norm is not None else nn.Identity()
-        self.act = act if act is not None else nn.Identity()
+        self.norm = self._get_normalization(norm)(out_channels * n_heads) if norm is not None else nn.Identity()
+        self.act = self._get_activation(act)() if act is not None else nn.Identity()
         self.dropout = nn.Dropout(dropout)
         self.residual = (in_channels == out_channels * n_heads)
 
@@ -63,13 +63,13 @@ class GATv2(nn.Module):
 
         BlockType = GATBlock if not use_skip_connections else GATSkipBlock
 
-        make_block = lambda in_ch, out_ch, nh=n_heads, concat=True: BlockType(
+        make_block = lambda in_ch, out_ch, nh=n_heads, concat=True, norm=self.norm_fn, act=self.act_fn: BlockType(
             in_channels=in_ch, 
             out_channels=out_ch, 
             n_heads=nh, 
-            dropout=dropout_rate, 
-            norm=self.norm_fn, 
-            act=self.act_fn,
+            dropout_rate=dropout_rate, 
+            norm=norm, 
+            act=act,
             concat=concat
         )
         self.layers = nn.ModuleList()
@@ -80,13 +80,18 @@ class GATv2(nn.Module):
             self.layers.append(
                 make_block(hidden_channels * n_heads, hidden_channels)
             )
-        self.layers.append(
-            make_block(hidden_channels * n_heads, out_channels, 1, concat=False)
-        )
+        self.final_conv=GATConv(
+                in_channels=hidden_channels * n_heads, 
+                out_channels=out_channels, 
+                heads=1, 
+                concat=False
+            )
+        
                 
 
     def forward(self, x, edge_index, batch=None):
         for layer in self.layers:
             x = layer(x, edge_index)
+        x = self.final_conv(x, edge_index)
 
         return x

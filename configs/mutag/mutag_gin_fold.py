@@ -3,7 +3,7 @@
 dataset_name = 'MUTAG'
 
 backbone = dict(
-    type='GraphSAGEv2',
+    type='GINv2',
     in_channels=7,  # Set according to your dataset
     out_channels=64, # Set according to your dataset
     hidden_channels=64,
@@ -15,7 +15,7 @@ backbone = dict(
 head = dict(
     type='MLPHead',
     in_channels=64,  # Output channels of the backbone
-    out_channels=2,  # Number of classes in ENZYMES dataset
+    out_channels=2,  # Number of classes in PROTEINS dataset
     hidden_channels=64,
     num_layers=4,
     norm='layer',
@@ -42,14 +42,14 @@ dataset = dict(
 
 optimizer = dict(
     type='Adam',
-    lr=0.001,
-    weight_decay=5e-4,
+    lr=0.01,
+    weight_decay=1e-5,
 )
 
 lr_scheduler = dict(
     type='StepLR',  # Any torch.optim.lr_scheduler.* class
-    step_size=3,
-    gamma=0.9,
+    step_size=20,
+    gamma=0.5,
 )
 
 train_dataloader = dict(
@@ -68,12 +68,14 @@ test_dataloader = dict(
 )
 
 runner = dict(
-    type='SplitRunner',
-    train_ratio=0.8,
+    type='KFoldRunner',
+    n_splits=10,  # Number of folds for K-Fold Cross Validation
     val_interval=1,
     epochs='inf',
     log_interval = 1,
-    patience = 100,
-    abort_condidtion=0.01,
+    metric='val_acc',
+    direction='max',
+    patience = 50,  # Increased patience for better training  
+    abort_condition=0.01,
     lr_scheduler=lr_scheduler,  # Pass scheduler config to runner
 )

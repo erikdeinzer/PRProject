@@ -8,6 +8,7 @@ class BasicBlock(nn.Module):
     def __init__(self):
         super(BasicBlock, self).__init__()
         
+    
     def _get_activation(self, act) -> nn.Module:
         if act == 'relu':
             return nn.ReLU

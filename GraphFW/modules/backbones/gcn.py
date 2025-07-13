@@ -47,45 +47,26 @@ class GCNv2(torch.nn.Module):
         """
         super().__init__()
 
-        self.convs=torch.nn.ModuleList()
+        self.layers=torch.nn.ModuleList()
 
         self.norm_fn = norm
         self.act_fn = act
 
-        make_block = lambda in_c, out_c: GCNBlock(
+        make_block = lambda in_c, out_c, act = self.act_fn, norm = self.norm_fn: GCNBlock(
             in_channels=in_c, 
             out_channels=out_c, 
             dropout=dropout_rate, 
-            norm=self.norm_fn,
-            act=self.act_fn 
+            norm=norm,
+            act=act 
         )   
 
-        self.convs.append(make_block(in_channels, hidden_channels))
+        self.layers.append(make_block(in_channels, hidden_channels))
         for _ in range(num_layers - 2):
-            self.convs.append(make_block(hidden_channels, hidden_channels))
+            self.layers.append(make_block(hidden_channels, hidden_channels))
         
-        self.convs.append(make_block(hidden_channels, out_channels))
+        self.layers.append(GCNConv(hidden_channels, out_channels))  # Last layer without activation or normalization
 
     def forward(self, x, edge_index, batch=None):
-        for block in self.convs:
+        for block in self.layers:
             x = block(x, edge_index)
         return x
-    
-    def _get_normalization(self, norm):
-        if norm == 'layer':
-            return nn.LayerNorm
-        elif norm == 'batch':
-            return nn.BatchNorm1d
-        elif norm == 'instance':
-            return nn.InstanceNorm1d
-        else:
-            raise ValueError(f"Unsupported normalization type: {norm}")
-    def _get_activation(self, act):
-        if act == 'relu':
-            return nn.ReLU()
-        elif act == 'elu':
-            return nn.ELU()
-        elif act == 'leaky_relu':
-            return nn.LeakyReLU(0.2)
-        else:
-            raise ValueError(f"Unsupported activation function: {act}")

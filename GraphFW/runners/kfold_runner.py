@@ -4,6 +4,7 @@ from .utils.progress_bar import progress_bar
 from torch_geometric.loader import DataLoader
 from sklearn.model_selection import StratifiedKFold
 import torch
+import os
 
 @RUNNERS.register_module(type='KFoldRunner')
 class KFoldRunner(BaseRunner):
@@ -17,16 +18,18 @@ class KFoldRunner(BaseRunner):
 
         self.models = torch.nn.ModuleList()
         self.optimizers = []
+        self.schedulers = []
 
         for _ in range(self.n_splits):
             model = build_module(self.model_cfg, MODULES)
             self.models.append(model)
             optimizer = build_module(self.optim_cfg, OPTIMIZERS, params=model.parameters())
             self.optimizers.append(optimizer)
-            if self.scheduler is not None:
+            if self.scheduler_cfg is not None:
                 # Remove 'type' from config and pass optimizer as first argument
-                scheduler_cfg = self.scheduler.copy()
-                self.scheduler = build_module(scheduler_cfg, SCHEDULERS, optimizer=optimizer)
+                scheduler_cfg = self.scheduler_cfg.copy()
+                sched = build_module(scheduler_cfg, SCHEDULERS, optimizer=optimizer)
+                self.schedulers.append(sched)
 
         if hasattr(self, 'train_data') and len(self.train_data) > 1000:
             print(f"Warning: Dataset is large ({len(self.train_data)} samples). Consider using a smaller number of folds for faster training or use Train Test Split (SplitRunner).")
@@ -52,6 +55,7 @@ class KFoldRunner(BaseRunner):
 
             train_loader = DataLoader(train_set, **self.train_dataloader)
             acc = 0
+            last_file = None
             for epoch in range(self.start_epoch, epochs + 1):
                 print()
                 avg_loss = self._train_epoch(model, train_loader, optimizer, epoch, total_epochs=epochs)
@@ -67,13 +71,16 @@ class KFoldRunner(BaseRunner):
                     if self._check_abort(self.history[i]):
                         print("\nEarly stopping triggered.")
                         break
-                if self._check_saving(self.history[i]):
-                    metric_value = self.history[i][self.metric][-1]
-                    self.save_model(
-                        filename=f'fold_{i + 1}_epoch_{epoch}_ckpt_{self.metric}_{metric_value:.4f}.pth', 
-                        history=self.history[i], 
-                        optimizer=optimizer, 
-                        model=model)
+                if self._check_saving(history=self.history[i]):
+                    if last_file:
+                        os.remove(last_file)    
+                    filename = f'fold_{i}_{self.metric}_{self.history[i][self.metric][-1]:.4f}.pth'
+                    last_file = self.save_model(filename=filename, history=self.history[i], optimizer=optimizer, model=model)
+                
+                # write a csv file with the history of the fold
+                self.write_history_to_csv(self.history[i], filename=f'history_fold_{i}.csv')
+                if self.schedulers:
+                    self.schedulers[i].step()
             print()
             accuracies.append(acc)
         avg_acc = sum(accuracies) / len(accuracies)

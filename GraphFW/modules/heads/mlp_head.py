@@ -27,15 +27,15 @@ class MLPHead(nn.Module):
     def __init__(self, in_channels, out_channels, hidden_channels=64, num_layers=2, dropout_rate=0.0, act='relu', norm=None):
         super(MLPHead, self).__init__()
         layers = []
-        self.act = act
-        self.norm = norm
+        self.act_fn = act
+        self.norm_fn = norm
         # Input layer
-        make_block = lambda in_c, out_c: PerceptronLayer(
+        make_block = lambda in_c, out_c, norm = self.norm_fn, act = self.act_fn: PerceptronLayer(
             in_features=in_c,
             out_features=out_c,
             dropout_rate=dropout_rate,
-            act=self.act,
-            norm=self.norm
+            act=act,
+            norm=norm
         )
         
         layers.append(make_block(in_channels, hidden_channels))
@@ -43,7 +43,7 @@ class MLPHead(nn.Module):
         for _ in range(num_layers - 2):
             layers.append(make_block(hidden_channels, hidden_channels))
         # Output layer  
-        layers.append(make_block(hidden_channels, out_channels))
+        layers.append(Linear(hidden_channels, out_channels))  # Last layer without activation or normalization
         
         self.mlp = nn.Sequential(*layers)
 

@@ -1,25 +1,25 @@
 # Config for GraphSAGE on ENZYMES dataset
 # Adjust parameters as needed for your experiments
-dataset_name = 'ENZYMES'
+dataset_name = 'PROTEINS'
 
 backbone = dict(
     type='GraphSAGEv2',
-    in_channels=21,  # Set according to your dataset
+    in_channels=4,  # Set according to your dataset
     out_channels=64, # Set according to your dataset
     hidden_channels=64,
-    num_layers=2,
+    num_layers=5,
     norm='layer',
-    dropout_rate=0.5,
+    dropout_rate=0.2,
     act='relu',
 )
 head = dict(
     type='MLPHead',
     in_channels=64,  # Output channels of the backbone
-    out_channels=6,  # Number of classes in ENZYMES dataset
+    out_channels=2,  # Number of classes in ENZYMES dataset
     hidden_channels=64,
     num_layers=4,
     norm='layer',
-    dropout_rate=0.5,
+    dropout_rate=0.2,
 )
 
 model = dict(
@@ -42,8 +42,8 @@ dataset = dict(
 
 optimizer = dict(
     type='Adam',
-    lr=0.01,
-    weight_decay=5e-4,
+    lr=0.001,
+    weight_decay=1e-5,
 )
 
 lr_scheduler = dict(
@@ -73,6 +73,10 @@ runner = dict(
     val_interval=1,
     epochs='inf',
     log_interval = 1,
-    patience = 50,
+    metric='val_acc',
+    direction='max',
+    patience = 50,  # Increased patience for better training  
+    abort_condidtion=0.01,
     lr_scheduler=lr_scheduler,  # Pass scheduler config to runner
+    seed = 1967803736
 )

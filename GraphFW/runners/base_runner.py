@@ -136,9 +136,6 @@ class BaseRunner:
                 posterior_vars = {'lr': current_lr, 'train_loss': total_loss / (i + 1), 'train_acc': acc}
                 progress_bar(prior_vars=prior_vars, posterior_vars=posterior_vars)
 
-        if self.scheduler is not None:
-            self.scheduler.step()
-
         return total_loss / len(train_loader)
 
     def save_cfg(self, filename='config.yaml'):
@@ -157,19 +154,22 @@ class BaseRunner:
         with open(os.path.join(self.save_dir, filename), 'w') as f:
             yaml.dump(cfg, f, default_flow_style=False)
 
-    def save_model(self, filename='ckpt.pth', history = None, optimizer=None, model=None):
-        history = history or self.history
+    def save_model(self, name='best', optimizer=None, model=None):
         optimizer = optimizer or self.optimizer
         model = model or self.model
-        torch.save({'metrics': history}, os.path.join(self.save_dir, 'metrics.pth'))
-        torch.save({'optimizer_state': optimizer.state_dict()}, os.path.join(self.save_dir, 'optimizer.pth'))
+        torch.save({'optimizer_state': optimizer.state_dict()}, os.path.join(self.save_dir, f'{name}_optim.pth'))
         if hasattr(model, 'save_checkpoint'):
-            model.save_checkpoint(path=os.path.join(self.save_dir, filename))
+            model.save_checkpoint(path=os.path.join(self.save_dir, f'{name}_ckpt.pth'))
         else:
-            torch.save(model.state_dict(), os.path.join(self.save_dir, filename))
-        print(f"Model saved to {os.path.join(self.save_dir, filename)}")
-        return os.path.join(self.save_dir, filename)
+            torch.save(model.state_dict(), os.path.join(self.save_dir, f'{name}_ckpt.pth'))
+        print(f"Model saved to {os.path.join(self.save_dir, f'{name}_ckpt.pth')}")
+        return os.path.join(self.save_dir, f'{name}_ckpt.pth')
 
+    def write_history_to_csv(self, history, filename='history.csv'):
+        import pandas as pd
+        df = pd.DataFrame(history)
+        df.to_csv(os.path.join(self.save_dir, filename), index=False)
+        print(f"History saved to {os.path.join(self.save_dir, filename)}")
 
     def run(self, mode='train', epochs=None, start_epoch=None):
         """
@@ -180,7 +180,7 @@ class BaseRunner:
         """
         epochs = epochs or self.train_epochs
         start_epoch = start_epoch or self.start_epoch
-        
+
         if mode == 'train':
             return self.train(start_epoch, epochs)
         elif mode == 'validation':

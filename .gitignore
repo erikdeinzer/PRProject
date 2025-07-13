@@ -5,3 +5,5 @@ data/*
 
 *.pth
 *.yaml
+
+work_dirs/*

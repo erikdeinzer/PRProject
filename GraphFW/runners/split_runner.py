@@ -52,6 +52,7 @@ class SplitRunner(BaseRunner):
         for epoch in range(start_epoch, epochs + 1):
             print()
             avg_loss = self._train_epoch(self.model, train_loader, self.optimizer, epoch, total_epochs=epochs)
+
             self.history['train_loss'].append(avg_loss)
             if epoch % self.val_interval == 0:
                 acc, val_loss = self.evaluate(model=self.model, data=self.test_set)
@@ -67,7 +68,11 @@ class SplitRunner(BaseRunner):
                     os.remove(last_file)    
                 filename = f'best_ckpt_{self.metric}_{self.history[self.metric][-1]:.4f}.pth'
                 last_file = self.save_model(filename=filename)
-                
+            
+            self.write_history_to_csv(self.history, filename=f'history.csv')
+
+            if self.scheduler is not None:
+                self.scheduler.step()
 
         
         print("\nFinal evaluation:")

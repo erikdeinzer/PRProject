@@ -70,26 +70,27 @@ class GINv2(nn.Module):
         """
         super().__init__()
 
-        self.convs=torch.nn.ModuleList()
+        self.layers=torch.nn.ModuleList()
         self.act_fn = act
         self.norm_fn = norm
 
-        make_block = lambda in_c, out_c: GINBlock(
+        make_block = lambda in_c, out_c, act = self.act_fn, norm=self.norm_fn, dropout = dropout_rate: GINBlock(
             in_channels=in_c, 
             out_channels=out_c, 
             hidden_channels=hidden_channels, 
-            dropout=dropout_rate, 
-            norm=self.norm_fn, 
-            act=self.act_fn
+            dropout=dropout, 
+            norm=norm, 
+            act=act
         )   
 
-        self.convs.append(make_block(in_channels, hidden_channels))
+        self.layers.append(make_block(in_channels, hidden_channels))
         for _ in range(num_layers - 2):
-            self.convs.append(make_block(hidden_channels, hidden_channels))
+            self.layers.append(make_block(hidden_channels, hidden_channels))
         
-        self.convs.append(make_block(hidden_channels, out_channels))
+        self.final_conv = make_block(hidden_channels, out_channels, act=None, norm=None, dropout=0.0)  # Last layer without activation or normalization
 
     def forward(self, x, edge_index, batch=None):
-        for block in self.convs:
+        for block in self.layers:
             x = block(x, edge_index)
+        x = self.final_conv(x, edge_index)
         return x
