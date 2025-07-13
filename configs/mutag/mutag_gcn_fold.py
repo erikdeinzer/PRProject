@@ -36,6 +36,7 @@ dataset = dict(
     transforms=[
         dict(type='ToUndirected'),
         dict(type='NormalizeFeatures'),
+        dict(type='RemoveIsolatedNodes'),
     ],
     use_node_attr=True
 )

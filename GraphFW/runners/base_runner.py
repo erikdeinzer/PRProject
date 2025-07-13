@@ -136,7 +136,7 @@ class BaseRunner:
                 mean_acc = total_acc / (i + 1)
                 prior_vars.update({'epoch': epoch, 'iteration': i+1})
                 current_lr = optimizer.param_groups[0]['lr']
-                posterior_vars = {'lr': current_lr, 'train_loss': total_loss / (i + 1), 'train_acc': mean_acc}
+                posterior_vars = {'lr': f'{current_lr:.3e}', 'train_loss': total_loss / (i + 1), 'train_acc': mean_acc}
                 progress_bar(prior_vars=prior_vars, posterior_vars=posterior_vars)
 
         return total_loss / len(train_loader)

@@ -37,7 +37,7 @@ class GINBlock(BasicBlock):
 
         self.conv = GINConv(self.mlp)
         
-        self.norm = self._get_normalization(norm) if norm is not None else nn.Identity()
+        self.norm = self._get_normalization(norm)(out_channels) if norm is not None else nn.Identity()
         self.act = self._get_activation(act)() if act is not None else nn.Identity()
         self.dropout = nn.Dropout(dropout)
 

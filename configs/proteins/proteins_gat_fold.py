@@ -37,13 +37,14 @@ dataset = dict(
     transforms=[
         dict(type='ToUndirected'),
         dict(type='NormalizeFeatures'),
+        dict(type='RemoveIsolatedNodes'),
     ],
     use_node_attr=True
 )
 
 optimizer = dict(
     type='Adam',
-    lr=0.01,
+    lr=0.001,
     weight_decay=1e-5,
 )
 
