@@ -121,6 +121,7 @@ class BaseRunner:
             'total_epochs': total_epochs if total_epochs is not None else 'inf',
             'total_iterations': len(train_loader),
         }
+        total_acc = 0.0
         for i, batch in enumerate(train_loader):
             batch = batch.to(self.device)
             optimizer.zero_grad()
@@ -131,9 +132,11 @@ class BaseRunner:
             total_loss += loss.item()
             if self.log_interval and (i % self.log_interval == 0 or i == len(train_loader)):
                 acc = out.argmax(dim=1).eq(batch.y).sum().item() / batch.num_graphs
+                total_acc += acc
+                mean_acc = total_acc / (i + 1)
                 prior_vars.update({'epoch': epoch, 'iteration': i+1})
                 current_lr = optimizer.param_groups[0]['lr']
-                posterior_vars = {'lr': current_lr, 'train_loss': total_loss / (i + 1), 'train_acc': acc}
+                posterior_vars = {'lr': current_lr, 'train_loss': total_loss / (i + 1), 'train_acc': mean_acc}
                 progress_bar(prior_vars=prior_vars, posterior_vars=posterior_vars)
 
         return total_loss / len(train_loader)
@@ -169,7 +172,8 @@ class BaseRunner:
         import pandas as pd
         df = pd.DataFrame(history)
         df.to_csv(os.path.join(self.save_dir, filename), index=False)
-        print(f"History saved to {os.path.join(self.save_dir, filename)}")
+        #print(f"History saved to {os.path.join(self.save_dir, filename)}")
+        return os.path.join(self.save_dir, filename)
 
     def run(self, mode='train', epochs=None, start_epoch=None):
         """
