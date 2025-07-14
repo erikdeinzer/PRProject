@@ -7,19 +7,19 @@ backbone = dict(
     in_channels=7,  # Set according to your dataset
     out_channels=64, # Set according to your dataset
     hidden_channels=64,
-    num_layers=5,
-    norm='layer',
-    dropout_rate=0.2,
+    num_layers=2,
+    norm='batch',
+    dropout_rate=0.1,
     act='relu',
 )
 head = dict(
     type='MLPHead',
     in_channels=64,  # Output channels of the backbone
     out_channels=2,  # Number of classes in PROTEINS dataset
-    hidden_channels=64,
-    num_layers=4,
-    norm='layer',
-    dropout_rate=0.2,
+    hidden_channels=32,
+    num_layers=1,
+    norm=None,
+    dropout_rate=0.1,
 )
 
 model = dict(
@@ -41,10 +41,11 @@ dataset = dict(
     use_node_attr=True
 )
 
+
 optimizer = dict(
     type='Adam',
-    lr=0.001,
-    weight_decay=1e-5,
+    lr=0.01,
+    weight_decay=1e-3,
 )
 
 lr_scheduler = dict(

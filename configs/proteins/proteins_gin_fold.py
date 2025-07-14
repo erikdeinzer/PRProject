@@ -7,8 +7,8 @@ backbone = dict(
     in_channels=4,  # Set according to your dataset
     out_channels=64, # Set according to your dataset
     hidden_channels=64,
-    num_layers=5,
-    norm='layer',
+    num_layers=2,
+    norm='batch',
     dropout_rate=0.2,
     act='relu',
 )
@@ -17,8 +17,8 @@ head = dict(
     in_channels=64,  # Output channels of the backbone
     out_channels=2,  # Number of classes in PROTEINS dataset
     hidden_channels=64,
-    num_layers=4,
-    norm='layer',
+    num_layers=2,
+    norm='batch',
     dropout_rate=0.2,
 )
 
@@ -43,18 +43,17 @@ dataset = dict(
 
 optimizer = dict(
     type='Adam',
-    lr=0.001,
-    weight_decay=1e-5,
+    lr=5e-3,
+    weight_decay=5e-4,
 )
 
 lr_scheduler = dict(
-    type='StepLR',  # Any torch.optim.lr_scheduler.* class
-    step_size=20,
-    gamma=0.5,
+    type='ExponentialLR',  # Any torch.optim.lr_scheduler.* class
+    gamma=0.95
 )
 
 train_dataloader = dict(
-    batch_size=32,
+    batch_size=16,
     shuffle=True,
 )
 

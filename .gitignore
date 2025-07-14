@@ -7,3 +7,13 @@
 *.yaml
 
 work_dirs/*
+
+
+# TEX auxiliary files
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+*.toc
+*.gz

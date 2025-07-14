@@ -4,7 +4,7 @@ dataset_name = 'PROTEINS'
 
 backbone = dict(
     type='GATv2',
-    in_channels=32,  # Set according to your dataset
+    in_channels=5,  # Set according to your dataset
     out_channels=64, # Set according to your dataset
     hidden_channels=64,
     n_heads=8,
@@ -37,7 +37,6 @@ dataset = dict(
     transforms=[
         dict(type='AddSelfLoops'),  # Adding self-loops to the graph
         dict(type='Constant', value=1),
-        dict(type='OneHotDegree', max_degree=26),  # One-hot encoding of node degrees
         dict(type='ToUndirected'),
         dict(type='NormalizeFeatures'),
         dict(type='RemoveIsolatedNodes'),  # Remove isolated nodes
