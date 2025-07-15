@@ -256,7 +256,7 @@ ENZYMES presents a more complex classification challenge due to its multi-class 
 	
 	\subsection{Graph Isomorphism Network (GIN)}
 	
-	The Graph Isomorphism Network (GIN), proposed in \cite{xu2019powerful}, is a GNN architecture specifically designed to match the discriminative power of the Weisfeiler-Lehman (WL) test — a classical test for graph isomorphism.
+	The Graph Isomorphism Network (GIN), proposed in \cite{xu2019powerful}, is a GNN architecture specifically designed to match the discriminative power of the Weisfeiler-Lehman (WL) test -- a classical test for graph isomorphism.
 	
 	The update rule in GIN is:
 	
@@ -337,11 +337,147 @@ ENZYMES presents a more complex classification challenge due to its multi-class 
 		\item $\sigma$ is a non-linear activation function.
 	\end{itemize}
 	
-	GraphSAGE is particularly scalable for large graphs, such as citation or social networks, due to its sampling approach. It also enables efficient inference on previously unseen nodes and graphs.
+	GraphSAGE is particularly scalable for large graphs, such as citation or social networks, due to its sampling approach. It also enables efficient inference on previously unseen nodes and graphs
 	
+	\section{Training Setup}
 	
+	\subsection{Data Preprocessing}
 	
+	For all experiments, we used datasets from the TUDataset collection, loaded via a custom \texttt{TUDatasetLoader} interface. Each dataset was preprocessed using a consistent set of transformations:
+	\begin{itemize}
+		\item \textbf{ToUndirected:} All graphs were converted to undirected format, ensuring edge symmetry.
+		\item \textbf{NormalizeFeatures:} Node features were scaled to have unit norm to stabilize training.
+		\item \textbf{RemoveIsolatedNodes:} Any node with no neighbors was removed to avoid redundant computation and disconnected components.
+	\end{itemize}
+	Node attributes were explicitly used via \texttt{use\_node\_attr=True}, which is critical for datasets like ENZYMES and PROTEINS that rely on rich node-level descriptors.
 	
+	\subsection{Model Architecture}
+	
+	All GNN variants followed a modular architecture comprising two main components:
+	\begin{itemize}
+		\item \textbf{Backbone:} A stack of three GNN layers specific to the chosen model type--GCN, GAT, GIN, or GraphSAGE. All of the used models were custom engineered versions of the original models, offering high modularity and controllability by relying on completely configurable blocks.
+		\item \textbf{Classification Head:} A fully connected MLP of varying depth, applied after an aggregating pooling operation, mapping the graph embedding to logits for classification.
+	\end{itemize}
+	This design ensured consistency across models, allowing a fair comparison of the expressive capacity of the GNN layers themselves.
+	
+	\subsection{Optimization and Training Strategy}
+	
+	We used the Adam optimizer with specific learning rates and weight decays per dataset. The values were achieved by trying different configuration alongside different learning rates, thus followed an handcrafted hyperparameter-optimization. The learning rate was decayed exponentially by a factor of $\gamma = 0.95$ at each epoch using the \texttt{ExponentialLR} scheduler. These hyperparameters were chosen based on stability across datasets and prior work in GNN literature.
+	
+	\subsection{Cross-Validation and Early Stopping}
+	
+	To ensure robustness of results and handle limited dataset sizes, we adopted a 10-fold stratified cross-validation approach using a custom \texttt{KFoldRunner}. The key parameters were:
+	\begin{itemize}
+		\item \textbf{Number of Folds:} 10 (with validation performed on each fold sequentially).
+		\item \textbf{Batch Size:} 16 for training; 1 for validation and testing.
+		\item \textbf{Patience:} Training was monitored via validation accuracy, with early stopping triggered if no improvement larger than \texttt{abort condition} was seen for 50 epochs.
+	\end{itemize}
+	
+	\subsection{Evaluation Metric}
+	
+	Validation accuracy (\texttt{val\_acc}) was used as the primary performance metric, with the goal of maximizing it. Mean and standard deviation across folds were computed and reported for each model-dataset combination. All the tested configs are available in the GitHub repo.
+	
+	%%%%%%%%
+	%RESULTS
+	\section{Results and Discussion}
+	
+	We performed a comparative evaluation of four prominent Graph Neural Network (GNN) architectures--Graph Attention Network (GAT), Graph Convolutional Network (GCN), Graph Isomorphism Network (GIN), and GraphSAGE--on three graph classification datasets from the TUDataset benchmark collection: MUTAG, PROTEINS and ENZYMES.
+	
+	For each model-dataset combination, we report validation accuracy obtained over multiple training runs using a consistent pipeline. The performance distributions are visualized using boxplots.
+	
+	\subsection{Performance of GNNs Across Datasets}
+	
+	\subsubsection*{GAT Performance}
+	
+	\begin{figure}[h]
+		\centering
+		\includegraphics[width=0.85\textwidth]{boxplot_GAT.png}
+		\caption{Validation accuracy of GAT across ENZYMES, MUTAG, and PROTEINS datasets.}
+		\label{fig:gat}
+	\end{figure}
+	
+	As shown in Figure~\ref{fig:gat}, GAT performs well on the MUTAG dataset, achieving an average accuracy above 0.8, with low variance. This suggests that attention mechanisms effectively capture relevant local structures in small molecular graphs. However, performance drops significantly on ENZYMES (accuracy around 0.2), indicating that GAT struggles with more complex, multi-class, heterogeneous biological graphs. On PROTEINS, performance remains modest (around 0.6), suggesting limited effectiveness of attention-based aggregation in this domain.
+	
+	\subsubsection*{GCN Performance}
+	
+	\begin{figure}[h]
+		\centering
+		\includegraphics[width=0.85\textwidth]{boxplot_GCN.png}
+		\caption{Validation accuracy of GCN across ENZYMES, MUTAG, and PROTEINS datasets.}
+		\label{fig:gcn}
+	\end{figure}
+	
+	GCN (Figure~\ref{fig:gcn}) consistently performs well across all datasets. On ENZYMES, it outperforms all other models with a mean accuracy around 0.65, demonstrating strong generalization on complex graphs. It also maintains robust accuracy on MUTAG and PROTEINS, both above 0.75, confirming its adaptability and simplicity as a strong baseline.
+	
+	\subsubsection*{GIN Performance}
+	
+	\begin{figure}[h]
+		\centering
+		\includegraphics[width=0.85\textwidth]{boxplot_GIN.png}
+		\caption{Validation accuracy of GIN across ENZYMES, MUTAG, and PROTEINS datasets.}
+		\label{fig:gin}
+	\end{figure}
+	
+	GIN (Figure~\ref{fig:gin}) performs exceptionally well on MUTAG (up to 0.9), leveraging its theoretical expressiveness. It also performs competitively on PROTEINS, but yields slightly lower and more variable results on ENZYMES. This suggests that GIN may benefit from richer node labels and simpler structural motifs, which are less prominent in ENZYMES.
+	
+	\subsubsection*{GraphSAGE Performance}
+	
+	\begin{figure}[h]
+		\centering
+		\includegraphics[width=0.85\textwidth]{boxplot_GRAPHSAGE.png}
+		\caption{Validation accuracy of GraphSAGE across ENZYMES, MUTAG, and PROTEINS datasets.}
+		\label{fig:graphsage}
+	\end{figure}
+	
+	GraphSAGE (Figure~\ref{fig:graphsage}) demonstrates strong and consistent performance across all datasets. It particularly excels on ENZYMES and PROTEINS, where it outperforms GIN and GAT. Its inductive sampling mechanism appears advantageous for generalizing over complex and variable topologies.
+	
+	\subsection{Model Comparison on Individual Datasets}
+	
+	\subsubsection*{ENZYMES Dataset}
+	
+	\begin{figure}[h]
+		\centering
+		\includegraphics[width=0.85\textwidth]{boxplot_ENZYMES.png}
+		\caption{Comparison of GNN models on the ENZYMES dataset.}
+		\label{fig:enzymes_models}
+	\end{figure}
+	
+	The ENZYMES dataset is multi-class and structurally heterogeneous, making it the most challenging. As shown in Figure~\ref{fig:enzymes_models}, GCN and GraphSAGE outperform the others, reaching accuracy values above 0.6. GAT performs poorly (≈0.2), suggesting that it may not adapt well to biological networks with irregular connectivity and weak local regularities. GIN provides mid-level accuracy but with higher variance, indicating sensitivity to initialization or optimization.
+	
+	\subsubsection*{MUTAG Dataset}
+	
+	\begin{figure}[h]
+		\centering
+		\includegraphics[width=0.85\textwidth]{boxplot_MUTAG.png}
+		\caption{Comparison of GNN models on the MUTAG dataset.}
+		\label{fig:mutag_models}
+	\end{figure}
+	
+	MUTAG is a small binary classification dataset composed of molecular graphs. All models achieve strong results (Figure~\ref{fig:mutag_models}), with GIN and GCN slightly ahead, suggesting that most GNN architectures can effectively learn over this simpler domain. GraphSAGE, although consistent, slightly underperforms compared to the rest, possibly due to limited neighborhood size in small graphs.
+	
+	\subsubsection*{PROTEINS Dataset}
+	
+	\begin{figure}[h!]
+		\centering
+		\includegraphics[width=0.85\textwidth]{boxplot_PROTEINS.png}
+		\caption{Comparison of GNN models on the PROTEINS dataset.}
+		\label{fig:proteins_models}
+	\end{figure}
+	
+	In Figure~\ref{fig:proteins_models}, we observe that GCN, GIN, and GraphSAGE all achieve comparable performance (≈0.75–0.8), while GAT again falls behind. The consistent performance of GCN and GraphSAGE confirms their generalization ability, while GIN’s strong results again demonstrate its suitability for structural pattern learning. GAT's weakness suggests its attention mechanism may not align well with the topological characteristics of protein interaction graphs.
+	
+	\subsection{General Observations}
+	
+	\begin{itemize}
+		\item \textbf{GCN} shows excellent performance and generalization across all datasets. Its simplicity and effectiveness make it a strong baseline.
+		\item \textbf{GraphSAGE} performs robustly, particularly in large, noisy, or irregular graphs (ENZYMES, PROTEINS), benefiting from its sampling-based inductive design.
+		\item \textbf{GIN} shines in small, structurally simple datasets like MUTAG, but is more sensitive in complex settings.
+		\item \textbf{GAT} suffers in generalization and is highly dataset-dependent. While it performs well on MUTAG, its attention mechanism appears to overfit or fail in more complex domains.
+	\end{itemize}
+	
+	These results suggest that no single GNN architecture dominates in all settings. Instead, model performance is closely tied to the nature of the graph data--node labels, class structure, graph size, and connectivity patterns. Hence, model selection should consider dataset characteristics.
+	
+	\newpage
 	%END DOCUMENT - APPEND REFERENCES
 	\bibliographystyle{plain}
 	\bibliography{references}
