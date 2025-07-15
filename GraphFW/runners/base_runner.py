@@ -168,7 +168,8 @@ class BaseRunner:
         else:
             torch.save(model.state_dict(), os.path.join(self.save_dir, f'{name}_ckpt.pth'))
         print(f"Model saved to {os.path.join(self.save_dir, f'{name}_ckpt.pth')}")
-        return os.path.join(self.save_dir, f'{name}_ckpt.pth')
+
+        return os.path.join(self.save_dir, f'{name}_ckpt.pth'), os.path.join(self.save_dir, f'{name}_optim.pth')
 
     def write_history_to_csv(self, history, filename='history.csv'):
         import pandas as pd

@@ -14,7 +14,7 @@ backbone = dict(
 )
 head = dict(
     type='MLPHead',
-    in_channels=64,  # Output channels of the backbone
+    in_channels=128,  # Output channels of the backbone
     out_channels=2,  # Number of classes in PROTEINS dataset
     hidden_channels=64,
     num_layers=2,

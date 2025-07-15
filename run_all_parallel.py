@@ -35,7 +35,7 @@ def main():
                     processes.remove((p, cfg))
             time.sleep(1)
 
-        print(f"🚀 Launching: {config}")
+        print(f"Launching: {config}")
         env = os.environ.copy()
         env["PYTHONIOENCODING"] = "utf-8"
         p = subprocess.Popen(
@@ -52,7 +52,7 @@ def main():
     # Wait for all to complete
     for p, cfg in processes:
         p.wait()
-        print(f"✅ Finished: {cfg} (code {p.returncode})")
+        print(f"Finished: {cfg} (code {p.returncode})")
 
 if __name__ == "__main__":
     main()

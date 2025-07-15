@@ -85,10 +85,8 @@
 		\item A graph is \textbf{dense} if it has many edges and a high degree of node connectivity.
 	\end{itemize}
 	Formally, sparsity can be approximated by the edge density:
-	\[
-	\text{Density} = \frac{2 \cdot |E|}{|V| \cdot (|V| - 1)}
-	\]
-	where $|E|$ is the number of edges and $|V|$ is the number of nodes.
+	$\text{Density} = \frac{2 \cdot |E|}{|V| \cdot (|V| - 1)}$
+	where $|E|$ is the number of edges and $|V|$ is the number of nodes. With Density $D \geq 0.4$, a graph is denoted as dense in the following, a graph with $D \leq 0.1$ as very sparse and a graph with $D \approx 1$ as fully connected..
 	
 	\paragraph{Homogeneous vs. Heterogeneous Graphs}
 	\begin{itemize}
@@ -135,8 +133,9 @@ Each graph represents a molecule where:
 	\item \textbf{Number of graphs:} 188
 	\item \textbf{Average number of nodes per graph:} 17.93
 	\item \textbf{Average number of edges per graph:} 19.79
+		\item \textbf{Mean Density:} $D \approx 0.096$
 	\item \textbf{Classes:} 2 (mutagenic, non-mutagenic)
-	\item \textbf{Type:} Small, sparse, homogeneous, labeled, attributed
+	\item \textbf{Type:} Small, very sparse, homogeneous, labeled, attributed
 \end{itemize}
 
 \paragraph{Scientific Usage:}
@@ -163,8 +162,9 @@ Each graph models the secondary structure of a protein:
 	\item \textbf{Number of graphs:} 1,113
 	\item \textbf{Average number of nodes per graph:} 39.06
 	\item \textbf{Average number of edges per graph:} 72.82
+		\item \textbf{Mean Density:} $D \approx 0.098$
 	\item \textbf{Classes:} 2 (enzyme, non-enzyme)
-	\item \textbf{Type:} Medium-sized, sparse, heterogeneous, labeled, attributed
+	\item \textbf{Type:} Medium-sized, very sparse, heterogeneous, labeled, attributed
 \end{itemize}
 
 \paragraph{Scientific Usage:}
@@ -192,6 +192,7 @@ Each graph represents a protein, modeled similarly to the PROTEINS dataset:
 	\item \textbf{Classes:} 6 (corresponding to EC enzyme classes)
 	\item \textbf{Average number of nodes per graph:} 32.63
 	\item \textbf{Average number of edges per graph:} 62.14
+	\item \textbf{Mean Density:} $D \approx 0.12$
 	\item \textbf{Type:} Medium-sized, sparse, heterogeneous, labeled, attributed
 \end{itemize}
 

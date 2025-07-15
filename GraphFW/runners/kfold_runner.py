@@ -55,7 +55,8 @@ class KFoldRunner(BaseRunner):
 
             train_loader = DataLoader(train_set, **self.train_dataloader)
             acc = 0
-            last_file = None
+            last_files = None
+
             for epoch in range(self.start_epoch, epochs + 1):
                 print()
                 avg_loss = self._train_epoch(model, train_loader, optimizer, epoch, total_epochs=epochs)
@@ -66,19 +67,20 @@ class KFoldRunner(BaseRunner):
                     self.history[i]['val_loss'].append(val_loss)
                     self.history[i]['val_acc'].append(acc)
                 
+                self.write_history_to_csv(self.history[i], filename=f'history_fold_{i}.csv')
+
                 # Only check abort if enough values in history
                 if len(self.history[i][self.metric]) >= self.patience + 1:
                     if self._check_abort(self.history[i]):
                         print("\nEarly stopping triggered.")
                         break
-                if self._check_saving(history=self.history[i]):
-                    if last_file:
-                        os.remove(last_file)    
+                if self._check_saving(history=self.history[i]) or last_files is None:
+                    if last_files:
+                        os.remove(last_files[0]) # Delete last ckpt
+                        os.remove(last_files[1]) # Delete last optim    
                     filename = f'fold_{i}_{self.metric}_{self.history[i][self.metric][-1]:.4f}'
-                    last_file = self.save_model(name=filename, optimizer=optimizer, model=model)
+                    last_files = self.save_model(name=filename, optimizer=optimizer, model=model)
                 
-                # write a csv file with the history of the fold
-                self.write_history_to_csv(self.history[i], filename=f'history_fold_{i}.csv')
                 if self.schedulers:
                     self.schedulers[i].step()
             print()
